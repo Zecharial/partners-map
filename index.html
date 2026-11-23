@@ -254,7 +254,7 @@ function claimUI(m) {
   if (!rep) return '';
   const c = claims[m.i], mine = myMall();
   if (c && c.mine) return `<div class="claim me"><p><b>המתחם רשום על שמך.</b><small>${nLeft(leftIn(m))} לעדכון. אחרי שתסיימו את כולן אפשר יהיה לבחור את המתחם הבא.</small></p></div>`;
-  if (c) return `<div class="claim"><p><b>המתחם רשום על שם ${esc(c.by)}.</b><small>כדי למנוע כפילות, כדאי לבחור מתחם אחר.</small></p></div>`;
+  if (c) return `<div class="claim"><p><b>המתחם רשום על שם ${esc(c.by)}.</b><small>תיעוד ביקורים כאן פתוח רק ל${esc(c.by)}. בחרו מתחם אחר.</small></p></div>`;
   if (mine && leftIn(mine) > 0) return `<div class="claim"><p><b>המתחם פנוי.</b><small>קודם צריך לסיים את <a href="#${mine.i}">${esc(mine.n)}</a>: ${nLeft(leftIn(mine))} לעדכון.</small></p></div>`;
   if (done[m.i]) return `<div class="claim"><p><b>✓ המתחם הושלם ב-${fmt(done[m.i].t)} על ידי ${esc(done[m.i].by)}.</b><small>אין צורך לקחת אותו שוב, אלא אם התבקשתם לעשות בו סבב נוסף.</small></p>${mine && leftIn(mine) > 0 ? '' : '<button type="button" class="no" data-claim="claim">סבב נוסף על שמי</button>'}</div>`;
   return `<div class="claim"><p><b>המתחם פנוי.</b><small>לוקחים מתחם אחד בכל פעם, ומסיימים את כל הרשתות שבו לפני שעוברים לבא.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
@@ -276,9 +276,9 @@ async function sendClaim(m, act, btn) {
 }
 function visitUI(m, i) {
   if (!rep) return '';
-  const v = latest[m.i + '|' + D.chains[i].n];
+  const v = latest[m.i + '|' + D.chains[i].n], other = claims[m.i] && !claims[m.i].mine;  // מתחם של נציג אחר: צפייה בלבד
   return `<div class="vis">${v ? `<span class="vstat s${STAT.indexOf(v.s)}">${ICON[STAT.indexOf(v.s)] || ''} ${esc(v.s)}</span><span class="vwhen">${fmt(v.t)} · ${esc(v.by)}</span>` : '<span class="vwhen">טרם בוקר</span>'}
-    ${lockedUntil(v) ? `<span class="vlock">ביקור נוסף מ-${fmt(lockedUntil(v))}</span>` : `<button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button>`}</div>`;
+    ${other ? '' : lockedUntil(v) ? `<span class="vlock">ביקור נוסף מ-${fmt(lockedUntil(v))}</span>` : `<button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button>`}</div>`;
 }
 async function initRep() {
   if (!API) return;
@@ -353,6 +353,7 @@ $('vform').addEventListener('submit', async e => {
   } finally { btn.disabled = false; btn.textContent = 'שמירת הביקור'; }
 });
 function openVisit(m, i) {
+  if (claims[m.i] && !claims[m.i].mine) { toast('המתחם רשום על שם ' + claims[m.i].by); return; }
   cur = { m, chain: D.chains[i].n }; photo = thumb = '';
   $('vform').reset(); $('vprev').hidden = true; $('verr').hidden = true; $('vphoto-l').textContent = 'צילום או העלאת תמונה';
   $('dlg-sub').textContent = cur.chain + ' · ' + m.n;
