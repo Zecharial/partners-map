@@ -99,6 +99,10 @@ dialog::backdrop{background:rgba(8,14,28,.6)}
 .opts label:has(input:checked){border-color:var(--ink);background:var(--ink);color:var(--bg)}
 .opts label:has(input:focus-visible){outline:3px solid var(--brand);outline-offset:2px}
 .dform textarea{font:inherit;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical;min-height:70px}
+.kfield{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:500}
+.kstep{display:flex;align-items:center;gap:8px}
+.kstep button{font:inherit;font-size:1.3rem;font-weight:700;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.kstep input{font:inherit;font-size:1.15rem;font-weight:700;width:64px;height:44px;text-align:center;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-variant-numeric:tabular-nums}
 .photo{display:flex;align-items:center;gap:12px}
 .photo label{flex:1;text-align:center;padding:12px;border-radius:12px;border:1.5px dashed var(--brand);color:var(--brand);font-weight:500;cursor:pointer}
 .photo input{position:absolute;opacity:0;width:1px;height:1px}
@@ -136,6 +140,8 @@ dialog::backdrop{background:rgba(8,14,28,.6)}
         <label><input type="radio" name="status" id="st2" value="סניף סגור"><span>סניף סגור</span></label>
       </div>
       <p class="dwarn" id="vwarn" hidden></p>
+      <div class="kfield"><label for="vcash">מספר קופאיות</label>
+        <div class="kstep"><button type="button" id="kminus" aria-label="פחות קופאית אחת">−</button><input id="vcash" type="number" inputmode="numeric" min="0" max="200" placeholder="?"><button type="button" id="kplus" aria-label="עוד קופאית אחת">+</button></div></div>
       <textarea id="vnote" placeholder="הערה (לא חובה)" maxlength="1000" aria-label="הערה"></textarea>
       <div class="photo"><label for="vphoto" id="vphoto-l">צילום או העלאת תמונה</label><input type="file" id="vphoto" accept="image/*" capture="environment"><img id="vprev" alt="תצוגה מקדימה של התמונה" hidden></div>
       <p class="derr" id="verr" hidden></p>
@@ -276,12 +282,16 @@ $('vphoto').addEventListener('change', async e => {
   } catch (err) { photo = thumb = ''; $('verr').textContent = 'לא הצלחנו לקרוא את התמונה. נסו לצלם שוב.'; $('verr').hidden = false; }
 });
 $('vcancel').addEventListener('click', () => $('dlg').close());
+const bump = d => { const i = $('vcash'); i.value = Math.max(0, Math.min(200, (parseInt(i.value, 10) || 0) + d)); };
+$('kminus').addEventListener('click', () => bump(-1)); $('kplus').addEventListener('click', () => bump(1));
 $('vform').addEventListener('submit', async e => {
   e.preventDefault();
   if (!cur) return;
+  const status = new FormData(e.target).get('status'), cashiers = $('vcash').value.trim();
+  if (cashiers === '' && status !== 'סניף סגור') { $('verr').textContent = 'כמה קופאיות יש בסניף? צריך למלא מספר לפני השמירה.'; $('verr').hidden = false; $('vcash').focus(); return; }
   const btn = $('vsend'); btn.disabled = true; btn.textContent = 'שומר...'; $('verr').hidden = true;
   try {
-    const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, status: new FormData(e.target).get('status'), note: $('vnote').value, photo, thumb };
+    const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, status, cashiers, note: $('vnote').value, photo, thumb };
     const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })).json();
     if (!res.ok) throw new Error(res.error || '');
     latest[cur.m.i + '|' + cur.chain] = res.visit;
