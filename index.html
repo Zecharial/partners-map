@@ -200,7 +200,7 @@ function home() {
   const what = chainHit && !D.malls.some(m => m.k.includes(term)) ? ` שבהם נמצאת ${chainHit.map(i => esc(D.chains[i].n)).join(' / ')}` : '';
   app.innerHTML = `
     <p class="lede"><b>${D.chains.length}</b> רשתות שותפות ב-<b>${D.malls.length}</b> קניונים ומרכזי מסחר ברחבי הארץ. בחרו מתחם כדי לראות אילו שותפים מחכים לכם שם.</p>
-    ${myMalls().length ? `<h2>המתחמים שלי</h2><div class="links">${myMalls().map(x => `<a href="#${x.i}">${esc(x.n)} <b>${x.s.filter(i => latest[x.i + '|' + D.chains[i].n]).length}/${x.s.length}</b></a>`).join('')}</div>` : ''}
+    ${myMall() ? `<h2>המתחם שלי</h2><div class="links"><a href="#${myMall().i}">${esc(myMall().n)} <b>${myMall().s.length - leftIn(myMall())}/${myMall().s.length}</b></a></div>` : ''}
     <div class="chips" role="group" aria-label="סינון לפי עיר">${chips}</div>
     <p class="count-line">${list.length} מתחמים${city ? ' ב' + esc(city) : ''}${what}</p>
     ${list.length ? `<ul class="malls">${list.slice(0,limit).map(mallCard).join('')}</ul>` : `<div class="empty">לא נמצא מתחם מתאים. נסו שם עיר או שם קניון אחר.</div>`}
@@ -230,38 +230,44 @@ function mallView(m, keepScroll) {
 /* ---------- תיעוד ביקורים: פעיל רק למי שנכנס עם קישור אישי של נציג ---------- */
 const API = "https://script.google.com/macros/s/AKfycbxhZaCkfzyOQfSsrlGWTc4DH9TaEPVk2fbt9TjNSP-Q4LDqe5xrmMS7QwZgIDRzH-Y/exec";
 const STAT = ['תקין','יש בעיה','סניף סגור'], ICON = ['✓','!','✕'];
-let rep = null, token = '', latest = {}, claims = {}, BLOCK = 3, MAXC = 3, cur = null, photo = '', thumb = '';
+let rep = null, token = '', latest = {}, claims = {}, BLOCK = 3, cur = null, photo = '', thumb = '';
 const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
 /* ביקור נוסף באותו סניף נחסם למשך BLOCK ימים מהביקור האחרון */
 const lockedUntil = v => v && Date.now() - v.t < BLOCK * 864e5 ? v.t + BLOCK * 864e5 : 0;
-/* שיוך מתחמים: כל נציג יכול לקחת על שמו עד MAXC מתחמים, וכל הנציגים רואים מי לקח מה */
-const myMalls = () => rep ? D.malls.filter(m => claims[m.i] && claims[m.i].mine) : [];
+/* שיוך מתחמים: כל נציג מחזיק מתחם אחד בכל פעם, ועובר לבא רק אחרי שעדכן סטטוס בכל הרשתות שבו */
+const myMall = () => rep ? D.malls.find(m => claims[m.i] && claims[m.i].mine) : null;
+/* כמה רשתות במתחם משויך עוד מחכות לעדכון (ביקור מימי החסימה שלפני לקיחת המתחם נחשב) */
+function leftIn(m) {
+  const c = claims[m.i], from = c ? c.t - BLOCK * 864e5 : 0;
+  return m.s.filter(i => { const v = latest[m.i + '|' + D.chains[i].n]; return !(v && v.t >= from); }).length;
+}
+const nLeft = n => n === 1 ? 'נשארה רשת אחת' : 'נשארו ' + n + ' רשתות';
 function ownTag(m) {
   const c = rep && claims[m.i];
   return c ? `<div class="own${c.mine ? ' me' : ''}">${c.mine ? 'על שמך' : 'על שם ' + esc(c.by)}</div>` : '';
 }
 function claimUI(m) {
   if (!rep) return '';
-  const c = claims[m.i], mine = myMalls().length;
-  if (c && c.mine) return `<div class="claim me"><p><b>המתחם רשום על שמך.</b><small>שאר הנציגים רואים שלקחת אותו.</small></p><button type="button" class="no" data-claim="unclaim">שחרור המתחם</button></div>`;
+  const c = claims[m.i], mine = myMall();
+  if (c && c.mine) return `<div class="claim me"><p><b>המתחם רשום על שמך.</b><small>${nLeft(leftIn(m))} לעדכון. אחרי שתסיימו את כולן אפשר יהיה לבחור את המתחם הבא.</small></p></div>`;
   if (c) return `<div class="claim"><p><b>המתחם רשום על שם ${esc(c.by)}.</b><small>כדי למנוע כפילות, כדאי לבחור מתחם אחר.</small></p></div>`;
-  if (mine >= MAXC) return `<div class="claim"><p><b>המתחם פנוי.</b><small>כבר רשומים על שמך ${MAXC} מתחמים. כדי לקחת את זה צריך לשחרר אחד מהם.</small></p></div>`;
-  return `<div class="claim"><p><b>המתחם פנוי.</b><small>רשומים על שמך ${mine} מתוך ${MAXC} מתחמים.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
+  if (mine && leftIn(mine) > 0) return `<div class="claim"><p><b>המתחם פנוי.</b><small>קודם צריך לסיים את <a href="#${mine.i}">${esc(mine.n)}</a>: ${nLeft(leftIn(mine))} לעדכון.</small></p></div>`;
+  return `<div class="claim"><p><b>המתחם פנוי.</b><small>לוקחים מתחם אחד בכל פעם, ומסיימים את כל הרשתות שבו לפני שעוברים לבא.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
 }
 function applyState(v) {
   latest = {}; v.latest.forEach(x => latest[x.m + '|' + x.c] = x);
   claims = {}; (v.claims || []).forEach(c => claims[c.m] = c);
-  if (v.block != null) BLOCK = v.block; if (v.max != null) MAXC = v.max;
+  if (v.block != null) BLOCK = v.block;
 }
 async function sendClaim(m, act, btn) {
   btn.disabled = true;
   try {
-    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act, m: m.i, mn: m.n, city: m.c }) })).json();
+    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act, m: m.i, mn: m.n, city: m.c, n: m.s.length }) })).json();
     if (!res.ok) { toast(res.error || 'הפעולה לא נשמרה'); await loadVisits(true); return; }
     applyState(res); loadVisits.sig = ''; mallView(m, true);
-    toast(act === 'claim' ? m.n + ' רשום עכשיו על שמך' : 'שחררת את ' + m.n);
+    toast(m.n + ' רשום עכשיו על שמך');
   } catch (e) { toast('הפעולה לא נשמרה. בדקו את החיבור לרשת.'); btn.disabled = false; }
 }
 function visitUI(m, i) {
@@ -292,7 +298,7 @@ async function loadVisits(force) {
   try {
     const v = await (await fetch(API + '?action=visits&r=' + encodeURIComponent(token))).json();
     if (!v.ok || $('dlg').open) return;
-    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), v.block, v.max]);
+    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), v.block]);
     if (sig === loadVisits.sig) return;
     loadVisits.sig = sig; applyState(v);
     const y = scrollY, m = byId[location.hash.slice(1)];
@@ -335,8 +341,9 @@ $('vform').addEventListener('submit', async e => {
     const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, status, cashiers, note: $('vnote').value, photo, thumb };
     const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })).json();
     if (!res.ok) { loadVisits.sig = ''; lastLoad = 0; throw new Error(res.error || ''); }
-    latest[cur.m.i + '|' + cur.chain] = res.visit;
-    $('dlg').close(); mallView(cur.m, true); toast('הביקור ב' + cur.chain + ' נשמר');
+    if (res.latest) { applyState(res); loadVisits.sig = ''; } else latest[cur.m.i + '|' + cur.chain] = res.visit;
+    $('dlg').close(); mallView(cur.m, true);
+    toast(res.finished ? 'סיימת את ' + cur.m.n + '. אפשר לבחור את המתחם הבא' : 'הביקור ב' + cur.chain + ' נשמר');
   } catch (err) {
     $('verr').textContent = 'הביקור לא נשמר. ' + (err.message && !/fetch|JSON/i.test(err.message) ? err.message : 'בדקו את החיבור לרשת ונסו שוב.'); $('verr').hidden = false;
   } finally { btn.disabled = false; btn.textContent = 'שמירת הביקור'; }
