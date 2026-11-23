@@ -80,7 +80,7 @@ const store = (k, v) => { try { if (v === undefined) return localStorage.getItem
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' });
 const safeUrl = u => /^https:\/\//.test(u || '') ? u : '';
 const safeImg = u => /^data:image\/(jpeg|png|webp);base64,/.test(u || '') ? u : '';
-let D = null, V = [], mallLimit = 25, mq = '';
+let D = null, V = [], CL = {}, mallLimit = 25, mq = '';
 
 function pill(s) { const i = STAT.indexOf(s); return `<span class="pill s${i}">${ICON[i] || ''} ${esc(s)}</span>`; }
 function draw() {
@@ -103,11 +103,12 @@ function draw() {
     const lt = Math.max(0, ...inP.filter(v => v.m === m.i).map(v => v.t));
     return { m, vis, lt };
   }).filter(r => !term || (r.m.n + ' ' + r.m.c).includes(term))
-    .sort((a, b) => b.vis.length - a.vis.length || b.m.s.length - a.m.s.length);
+    .sort((a, b) => !!CL[b.m.i] - !!CL[a.m.i] || b.vis.length - a.vis.length || b.m.s.length - a.m.s.length);
   const mallRows = rows.slice(0, mallLimit).map(r => `<tr>
       <td><details><summary><span class="mn">${esc(r.m.n)}</span> <span class="muted">· ${esc(r.m.c)}</span></summary>
         <div class="chainlist">${r.m.s.map(i => `<span class="${r.vis.includes(i) ? 'v' : ''}">${r.vis.includes(i) ? '✓ ' : ''}${esc(D.chains[i].n)}</span>`).join('')}</div></details></td>
       <td><div class="meter"><div class="bar"><i style="width:${pct(r.vis.length, r.m.s.length)}%"></i></div><span class="num">${r.vis.length} מתוך ${r.m.s.length}</span></div></td>
+      <td>${CL[r.m.i] ? esc(CL[r.m.i]) : '<span class="muted">פנוי</span>'}</td>
       <td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
 
   // פעילות לפי נציג
@@ -117,7 +118,7 @@ function draw() {
   const maxN = Math.max(1, ...Object.values(byRep).map(r => r.n));
   const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set() };
     return `<tr><td>${esc(n)}</td><td><div class="meter"><div class="bar"><i style="width:${r.n / maxN * 100}%"></i></div><span class="num">${r.n}</span></div></td>
-      <td class="num">${r.malls.size}</td><td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
+      <td class="num">${r.malls.size}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
 
   const feed = [...inP].sort((a, b) => b.t - a.t).slice(0, 30).map(v => `<div class="visit">
       ${safeImg(v.thumb) ? `<img src="${safeImg(v.thumb)}" alt="תמונה מהביקור">` : '<div class="noimg"></div>'}
@@ -142,11 +143,11 @@ function draw() {
         </tbody></table></div>` : `<div class="state">אין סניפים פתוחים לטיפול. כל הביקורים האחרונים דווחו כתקינים.</div>`}
     </section>
     <section><div class="sec-head"><h2>כיסוי לפי מתחם</h2><input type="search" id="mq" placeholder="חיפוש מתחם או עיר" value="${esc(mq)}" aria-label="חיפוש מתחם או עיר"></div>
-      <div class="card scroll"><table><thead><tr><th>מתחם (לחיצה מציגה את הרשתות)</th><th>רשתות שבוקרו</th><th>ביקור אחרון</th></tr></thead><tbody>${mallRows || '<tr><td colspan="3" class="muted">לא נמצא מתחם מתאים.</td></tr>'}</tbody></table></div>
+      <div class="card scroll"><table><thead><tr><th>מתחם (לחיצה מציגה את הרשתות)</th><th>רשתות שבוקרו</th><th>על שם</th><th>ביקור אחרון</th></tr></thead><tbody>${mallRows || '<tr><td colspan="4" class="muted">לא נמצא מתחם מתאים.</td></tr>'}</tbody></table></div>
       ${rows.length > mallLimit ? `<button class="btn" id="mmore" type="button">הצגת עוד מתחמים</button>` : ''}
     </section>
     <section><h2>פעילות לפי נציג</h2>
-      <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="4" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody></table></div>
+      <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים שבוקרו</th><th>מתחמים על שמו</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="5" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody></table></div>
     </section>
     <section><h2>ביקורים אחרונים</h2>
       ${feed ? `<div class="feed">${feed}</div>` : `<div class="state">עדיין אין ביקורים בתקופה שנבחרה.</div>`}
@@ -162,7 +163,7 @@ async function init() {
   try {
     const [d, r] = await Promise.all([fetch('data.json').then(x => x.json()), fetch(API + '?action=dash&key=' + encodeURIComponent(key)).then(x => x.json())]);
     if (!r.ok) throw new Error('key');
-    D = d; V = r.visits; REPS = r.reps || [];
+    D = d; V = r.visits; REPS = r.reps || []; CL = {}; (r.claims || []).forEach(c => CL[c.m] = c.by);
     $('repsel').innerHTML = '<option value="">כל הנציגים</option>' + [...new Set([...REPS, ...V.map(v => v.by)])].sort().map(n => `<option>${esc(n)}</option>`).join('');
     $('asof').textContent = 'מעודכן ל-' + new Date().toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' }) + ' · מקור: גיליון הביקורים';
     draw();

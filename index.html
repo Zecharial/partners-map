@@ -84,6 +84,15 @@ h2{font-family:var(--display);font-weight:400;font-size:1.2rem;margin:10px 0 0}
 .tile.done .art{opacity:.45}
 .tile.done .vbtn{border-color:var(--line);color:var(--muted)}
 .mall-prog{font-size:.82rem;color:var(--brand);font-weight:500}
+.vlock{color:var(--muted);font-weight:500;padding:6px 4px;border-radius:10px;border:1.5px dashed var(--line)}
+.own{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--ink);color:var(--bg);margin-top:4px}
+.own.me{background:var(--signal);color:var(--signal-ink)}
+.claim{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:var(--r);background:var(--surface);border:1.5px solid var(--line)}
+.claim.me{border-color:var(--signal)}
+.claim p{margin:0;min-width:0;flex:1 1 220px}.claim small{display:block;color:var(--muted)}
+.claim button{font:inherit;font-weight:700;padding:10px 16px;border-radius:12px;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.claim button.no{background:transparent;color:var(--ink)}
+.claim button:disabled{opacity:.55;cursor:default}
 .dwarn{margin:0;padding:10px 12px;border-radius:12px;background:var(--bg);border:1.5px solid var(--warn);font-size:.9rem}
 .vbtn{font:inherit;font-size:.85rem;font-weight:500;padding:7px 8px;border-radius:10px;border:1.5px solid var(--brand);background:transparent;color:var(--brand);cursor:pointer}
 .vbtn:hover{background:var(--brand);color:var(--brand-ink)}
@@ -173,7 +182,7 @@ function art(ci, cls) {
 function mallCard(m) {
   const show = m.s.filter(i => D.chains[i].l).sort((a,b) => D.chains[b].b - D.chains[a].b).slice(0,5), rest = m.s.length - show.length;
   return `<li><a class="mall" href="#${m.i}">
-    <div class="mall-head"><div><h3 class="mall-name">${esc(m.n)}</h3><div class="mall-city">${esc(m.c)}</div>${rep ? `<div class="mall-prog">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length}</div>` : ''}</div>
+    <div class="mall-head"><div><h3 class="mall-name">${esc(m.n)}</h3><div class="mall-city">${esc(m.c)}</div>${rep ? `<div class="mall-prog">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length}</div>${ownTag(m)}` : ''}</div>
     <span class="badge" title="מספר רשתות שותפות">${m.s.length}</span></div>
     <div class="strip">${show.map(i => art(i,'mini')).join('')}${rest > 0 ? `<span class="more-n">+${rest}</span>` : ''}</div></a></li>`;
 }
@@ -191,6 +200,7 @@ function home() {
   const what = chainHit && !D.malls.some(m => m.k.includes(term)) ? ` שבהם נמצאת ${chainHit.map(i => esc(D.chains[i].n)).join(' / ')}` : '';
   app.innerHTML = `
     <p class="lede"><b>${D.chains.length}</b> רשתות שותפות ב-<b>${D.malls.length}</b> קניונים ומרכזי מסחר ברחבי הארץ. בחרו מתחם כדי לראות אילו שותפים מחכים לכם שם.</p>
+    ${myMalls().length ? `<h2>המתחמים שלי</h2><div class="links">${myMalls().map(x => `<a href="#${x.i}">${esc(x.n)} <b>${x.s.filter(i => latest[x.i + '|' + D.chains[i].n]).length}/${x.s.length}</b></a>`).join('')}</div>` : ''}
     <div class="chips" role="group" aria-label="סינון לפי עיר">${chips}</div>
     <p class="count-line">${list.length} מתחמים${city ? ' ב' + esc(city) : ''}${what}</p>
     ${list.length ? `<ul class="malls">${list.slice(0,limit).map(mallCard).join('')}</ul>` : `<div class="empty">לא נמצא מתחם מתאים. נסו שם עיר או שם קניון אחר.</div>`}
@@ -208,6 +218,7 @@ function mallView(m, keepScroll) {
       <div><p class="where">${esc(m.c)}</p><h1>${esc(m.n)}</h1></div>
       <div class="big"><b>${m.s.length}</b><span>${m.s.length === 1 ? 'רשת שותפה' : 'רשתות שותפות'}</span></div>
     </section>
+    ${claimUI(m)}
     ${rep ? `<p class="progress">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length} רשתות במתחם הזה.</p>` : ''}
     <ul class="board">${chains.map(i => `<li><div class="tile${seen(i) ? ' done' : ''}">${seen(i) ? '<span class="vdone">✓ בוקר</span>' : ''}${art(i,'art')}<div class="cap">${esc(D.chains[i].n)}</div>${visitUI(m,i)}</div></li>`).join('')}</ul>
     ${others.length ? `<h2>עוד מתחמים ב${esc(m.c)}</h2><div class="links">${others.map(x => `<a href="#${x.i}">${esc(x.n)} <b>${x.s.length}</b></a>`).join('')}</div>` : ''}
@@ -219,15 +230,45 @@ function mallView(m, keepScroll) {
 /* ---------- תיעוד ביקורים: פעיל רק למי שנכנס עם קישור אישי של נציג ---------- */
 const API = "https://script.google.com/macros/s/AKfycbxhZaCkfzyOQfSsrlGWTc4DH9TaEPVk2fbt9TjNSP-Q4LDqe5xrmMS7QwZgIDRzH-Y/exec";
 const STAT = ['תקין','יש בעיה','סניף סגור'], ICON = ['✓','!','✕'];
-let rep = null, token = '', latest = {}, cur = null, photo = '', thumb = '';
+let rep = null, token = '', latest = {}, claims = {}, BLOCK = 3, MAXC = 3, cur = null, photo = '', thumb = '';
 const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+/* ביקור נוסף באותו סניף נחסם למשך BLOCK ימים מהביקור האחרון */
+const lockedUntil = v => v && Date.now() - v.t < BLOCK * 864e5 ? v.t + BLOCK * 864e5 : 0;
+/* שיוך מתחמים: כל נציג יכול לקחת על שמו עד MAXC מתחמים, וכל הנציגים רואים מי לקח מה */
+const myMalls = () => rep ? D.malls.filter(m => claims[m.i] && claims[m.i].mine) : [];
+function ownTag(m) {
+  const c = rep && claims[m.i];
+  return c ? `<div class="own${c.mine ? ' me' : ''}">${c.mine ? 'על שמך' : 'על שם ' + esc(c.by)}</div>` : '';
+}
+function claimUI(m) {
+  if (!rep) return '';
+  const c = claims[m.i], mine = myMalls().length;
+  if (c && c.mine) return `<div class="claim me"><p><b>המתחם רשום על שמך.</b><small>שאר הנציגים רואים שלקחת אותו.</small></p><button type="button" class="no" data-claim="unclaim">שחרור המתחם</button></div>`;
+  if (c) return `<div class="claim"><p><b>המתחם רשום על שם ${esc(c.by)}.</b><small>כדי למנוע כפילות, כדאי לבחור מתחם אחר.</small></p></div>`;
+  if (mine >= MAXC) return `<div class="claim"><p><b>המתחם פנוי.</b><small>כבר רשומים על שמך ${MAXC} מתחמים. כדי לקחת את זה צריך לשחרר אחד מהם.</small></p></div>`;
+  return `<div class="claim"><p><b>המתחם פנוי.</b><small>רשומים על שמך ${mine} מתוך ${MAXC} מתחמים.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
+}
+function applyState(v) {
+  latest = {}; v.latest.forEach(x => latest[x.m + '|' + x.c] = x);
+  claims = {}; (v.claims || []).forEach(c => claims[c.m] = c);
+  if (v.block != null) BLOCK = v.block; if (v.max != null) MAXC = v.max;
+}
+async function sendClaim(m, act, btn) {
+  btn.disabled = true;
+  try {
+    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act, m: m.i, mn: m.n, city: m.c }) })).json();
+    if (!res.ok) { toast(res.error || 'הפעולה לא נשמרה'); await loadVisits(true); return; }
+    applyState(res); loadVisits.sig = ''; mallView(m, true);
+    toast(act === 'claim' ? m.n + ' רשום עכשיו על שמך' : 'שחררת את ' + m.n);
+  } catch (e) { toast('הפעולה לא נשמרה. בדקו את החיבור לרשת.'); btn.disabled = false; }
+}
 function visitUI(m, i) {
   if (!rep) return '';
   const v = latest[m.i + '|' + D.chains[i].n];
   return `<div class="vis">${v ? `<span class="vstat s${STAT.indexOf(v.s)}">${ICON[STAT.indexOf(v.s)] || ''} ${esc(v.s)}</span><span class="vwhen">${fmt(v.t)} · ${esc(v.by)}</span>` : '<span class="vwhen">טרם בוקר</span>'}
-    <button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button></div>`;
+    ${lockedUntil(v) ? `<span class="vlock">ביקור נוסף מ-${fmt(lockedUntil(v))}</span>` : `<button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button>`}</div>`;
 }
 async function initRep() {
   if (!API) return;
@@ -251,9 +292,9 @@ async function loadVisits(force) {
   try {
     const v = await (await fetch(API + '?action=visits&r=' + encodeURIComponent(token))).json();
     if (!v.ok || $('dlg').open) return;
-    const sig = JSON.stringify(v.latest.map(x => [x.m, x.c, x.t]).sort());
+    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), v.block, v.max]);
     if (sig === loadVisits.sig) return;
-    loadVisits.sig = sig; latest = {}; v.latest.forEach(x => latest[x.m + '|' + x.c] = x);
+    loadVisits.sig = sig; applyState(v);
     const y = scrollY, m = byId[location.hash.slice(1)];
     if (m) mallView(m, true); else home();
     scrollTo(0, y);
@@ -293,7 +334,7 @@ $('vform').addEventListener('submit', async e => {
   try {
     const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, status, cashiers, note: $('vnote').value, photo, thumb };
     const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })).json();
-    if (!res.ok) throw new Error(res.error || '');
+    if (!res.ok) { loadVisits.sig = ''; lastLoad = 0; throw new Error(res.error || ''); }
     latest[cur.m.i + '|' + cur.chain] = res.visit;
     $('dlg').close(); mallView(cur.m, true); toast('הביקור ב' + cur.chain + ' נשמר');
   } catch (err) {
@@ -305,8 +346,9 @@ function openVisit(m, i) {
   $('vform').reset(); $('vprev').hidden = true; $('verr').hidden = true; $('vphoto-l').textContent = 'צילום או העלאת תמונה';
   $('dlg-sub').textContent = cur.chain + ' · ' + m.n;
   const prev = latest[m.i + '|' + cur.chain];
+  if (lockedUntil(prev)) { toast('הסניף בוקר ב-' + fmt(prev.t) + '. ביקור נוסף אפשרי מ-' + fmt(lockedUntil(prev))); return; }
   $('vwarn').hidden = !prev;
-  if (prev) $('vwarn').textContent = 'הסניף הזה כבר בוקר ב-' + fmt(prev.t) + ' על ידי ' + prev.by + ' (' + prev.s + '). אפשר לתעד ביקור נוסף אם צריך.';
+  if (prev) $('vwarn').textContent = 'הביקור הקודם בסניף היה ב-' + fmt(prev.t) + ', על ידי ' + prev.by + ' (' + prev.s + ').';
   $('dlg').showModal();
 }
 function render() {
@@ -319,6 +361,8 @@ app.addEventListener('click', e => {
   if (e.target.id === 'more') { limit += 30; home(); return; }
   const vb = e.target.closest('[data-visit]'), mm = byId[location.hash.slice(1)];
   if (vb && mm) openVisit(mm, +vb.dataset.visit);
+  const cb = e.target.closest('[data-claim]');
+  if (cb && mm) sendClaim(mm, cb.dataset.claim, cb);
 });
 app.addEventListener('error', e => {  // לוגו שלא נטען מוחלף בשם הרשת
   const im = e.target;
