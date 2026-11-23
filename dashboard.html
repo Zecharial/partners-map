@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>לוח ביקורים · מפת השותפים</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=Secular+One&display=swap">
+<style>
+/* Layout: סיכום למעלה (מספרים), אחריו מה שדורש טיפול, ואז כיסוי לפי מתחם, פעילות נציגים וביקורים אחרונים */
+:root{--bg:#F2F4F8;--surface:#FFFFFF;--ink:#14213D;--muted:#5B6781;--line:#DCE1EB;--brand:#0B6E6E;--track:#E3E8F0;
+  --signal:#FFC83D;--signal-ink:#3A2A00;--ok:#1B7F4B;--warn:#B45309;--bad:#B42318;
+  --display:"Secular One","Heebo","Arial Hebrew",Arial,sans-serif;--text:"Heebo","Arial Hebrew",Arial,sans-serif;--r:14px}
+@media (prefers-color-scheme: dark){:root{--bg:#0E1626;--surface:#18233A;--ink:#EEF2FA;--muted:#9FADC8;--line:#2A3855;--brand:#3FC1BD;--track:#26334F;
+  --ok:#4ADE80;--warn:#FBBF24;--bad:#F87171;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--text);font-size:16px;line-height:1.5}
+.wrap{max-width:1120px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+h1{font-family:var(--display);font-weight:400;font-size:1.9rem;line-height:1.1;margin:0}
+h1 span{background:var(--signal);color:var(--signal-ink);padding:0 .3em;border-radius:6px}
+h2{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:0}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.9rem}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=search]{font:inherit;padding:8px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font-family:var(--display);font-weight:400;font-size:2rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-size:.85rem}
+.kpi .lab{font-size:.9rem;font-weight:500}
+section{display:flex;flex-direction:column;gap:10px}
+.sec-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:start;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-weight:500;color:var(--muted);font-size:.82rem;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.meter{display:flex;align-items:center;gap:10px;min-width:180px}
+.meter .bar{flex:1;height:8px;border-radius:4px;background:var(--track);overflow:hidden;display:flex;justify-content:flex-start}
+.meter .bar i{display:block;height:100%;background:var(--brand);border-radius:4px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:.85rem;white-space:nowrap}
+.pill.s0{color:var(--ok)}.pill.s1{color:var(--warn)}.pill.s2{color:var(--bad)}
+.muted{color:var(--muted)}
+a{color:var(--brand)}
+details summary{cursor:pointer;list-style:none}details summary::-webkit-details-marker{display:none}
+details summary .mn{font-weight:700}
+.chainlist{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 4px}
+.chainlist span{font-size:.8rem;padding:3px 9px;border-radius:999px;border:1px solid var(--line)}
+.chainlist span.v{border-color:var(--brand);color:var(--brand);font-weight:500}
+.feed{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.visit{display:flex;gap:12px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+.visit img,.visit .noimg{flex:none;width:72px;height:72px;border-radius:10px;object-fit:cover;background:var(--track)}
+.visit .body{min-width:0;display:flex;flex-direction:column;gap:2px;font-size:.88rem}
+.visit .t{font-weight:700;font-size:.95rem}
+.visit .note{overflow-wrap:anywhere}
+.btn{align-self:center;font:inherit;font-weight:500;padding:8px 20px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
+.state{padding:40px 20px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:var(--r)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>לוח <span>ביקורים</span></h1><p class="sub" id="asof">טוען נתונים...</p></div>
+    <div class="filters">
+      <select id="period" aria-label="תקופה"><option value="30">30 הימים האחרונים</option><option value="90">90 הימים האחרונים</option><option value="0">כל הזמן</option></select>
+      <select id="repsel" aria-label="נציג"><option value="">כל הנציגים</option></select>
+    </div>
+  </header>
+  <div id="main"><div class="state">טוען נתונים...</div></div>
+</div>
+<script>
+const API = "https://script.google.com/macros/s/AKfycbxhZaCkfzyOQfSsrlGWTc4DH9TaEPVk2fbt9TjNSP-Q4LDqe5xrmMS7QwZgIDRzH-Y/exec";
+const STAT = ['תקין','יש בעיה','סניף סגור'], ICON = ['✓','!','✕'];
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' });
+const safeUrl = u => /^https:\/\//.test(u || '') ? u : '';
+const safeImg = u => /^data:image\/(jpeg|png|webp);base64,/.test(u || '') ? u : '';
+let D = null, V = [], mallLimit = 25, mq = '';
+
+function pill(s) { const i = STAT.indexOf(s); return `<span class="pill s${i}">${ICON[i] || ''} ${esc(s)}</span>`; }
+function draw() {
+  const days = +$('period').value, who = $('repsel').value, since = days ? Date.now() - days * 864e5 : 0;
+  const inP = V.filter(v => v.t >= since && (!who || v.by === who));
+  // מצב עדכני של כל סניף (מתחם + רשת) לפי הביקור האחרון, בלי תלות בתקופה
+  const last = {};
+  V.forEach(v => { const k = v.m + '|' + v.c; if (!last[k] || last[k].t < v.t) last[k] = v; });
+  const pairs = D.malls.reduce((n, m) => n + m.s.length, 0);
+  const seenP = new Set(inP.map(v => v.m + '|' + v.c)), mallsP = new Set(inP.map(v => v.m));
+  const open = Object.values(last).filter(v => v.s !== 'תקין').sort((a, b) => b.t - a.t);
+  const kpi = (b, lab, small) => `<div class="kpi"><span class="lab">${lab}</span><b>${b}</b><small>${small}</small></div>`;
+  const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  const pctTxt = (a, b) => a && pct(a, b) < 1 ? 'פחות מ-1' : pct(a, b);
+
+  // כיסוי לפי מתחם
+  const term = mq.trim();
+  const rows = D.malls.map(m => {
+    const vis = m.s.filter(i => seenP.has(m.i + '|' + D.chains[i].n));
+    const lt = Math.max(0, ...inP.filter(v => v.m === m.i).map(v => v.t));
+    return { m, vis, lt };
+  }).filter(r => !term || (r.m.n + ' ' + r.m.c).includes(term))
+    .sort((a, b) => b.vis.length - a.vis.length || b.m.s.length - a.m.s.length);
+  const mallRows = rows.slice(0, mallLimit).map(r => `<tr>
+      <td><details><summary><span class="mn">${esc(r.m.n)}</span> <span class="muted">· ${esc(r.m.c)}</span></summary>
+        <div class="chainlist">${r.m.s.map(i => `<span class="${r.vis.includes(i) ? 'v' : ''}">${r.vis.includes(i) ? '✓ ' : ''}${esc(D.chains[i].n)}</span>`).join('')}</div></details></td>
+      <td><div class="meter"><div class="bar"><i style="width:${pct(r.vis.length, r.m.s.length)}%"></i></div><span class="num">${r.vis.length} מתוך ${r.m.s.length}</span></div></td>
+      <td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
+
+  // פעילות לפי נציג
+  const byRep = {};
+  inP.forEach(v => { const r = byRep[v.by] || (byRep[v.by] = { n: 0, lt: 0, malls: new Set() }); r.n++; r.lt = Math.max(r.lt, v.t); r.malls.add(v.m); });
+  const repNames = [...new Set([...REPS, ...Object.keys(byRep)])].filter(n => !who || n === who).sort((a, b) => (byRep[b]?.n || 0) - (byRep[a]?.n || 0));
+  const maxN = Math.max(1, ...Object.values(byRep).map(r => r.n));
+  const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set() };
+    return `<tr><td>${esc(n)}</td><td><div class="meter"><div class="bar"><i style="width:${r.n / maxN * 100}%"></i></div><span class="num">${r.n}</span></div></td>
+      <td class="num">${r.malls.size}</td><td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
+
+  const feed = [...inP].sort((a, b) => b.t - a.t).slice(0, 30).map(v => `<div class="visit">
+      ${safeImg(v.thumb) ? `<img src="${safeImg(v.thumb)}" alt="תמונה מהביקור">` : '<div class="noimg"></div>'}
+      <div class="body"><span class="t">${esc(v.c)}</span><span class="muted">${esc(v.mn)} · ${esc(v.city)}</span>
+      <span>${pill(v.s)} <span class="muted">${fmt(v.t)} · ${esc(v.by)}</span></span>
+      ${v.note ? `<span class="note">${esc(v.note)}</span>` : ''}${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">לתמונה המלאה</a>` : ''}</div></div>`).join('');
+
+  $('main').innerHTML = `<div class="wrap" style="padding:0">
+    <div class="kpis">
+      ${kpi(inP.length, 'ביקורים', days ? `ב-${days} הימים האחרונים` : 'מאז תחילת התיעוד')}
+      ${kpi(seenP.size, 'סניפים שבוקרו', `${pctTxt(seenP.size, pairs)}% מתוך ${pairs.toLocaleString('he-IL')} סניפים במתחמים`)}
+      ${kpi(mallsP.size, 'מתחמים שבוקרו', `מתוך ${D.malls.length} מתחמים`)}
+      ${kpi(open.filter(v => v.s === 'יש בעיה').length, 'סניפים עם בעיה', 'לפי הביקור האחרון בכל סניף')}
+      ${kpi(open.filter(v => v.s === 'סניף סגור').length, 'סניפים שדווחו כסגורים', 'לפי הביקור האחרון בכל סניף')}
+    </div>
+    <section><h2>דורש טיפול</h2>
+      ${open.length ? `<div class="card scroll"><table><thead><tr><th>רשת</th><th>מתחם</th><th>מצב</th><th>הערה</th><th>דווח</th><th>תמונה</th></tr></thead><tbody>
+        ${open.slice(0, 50).map(v => `<tr><td><b>${esc(v.c)}</b></td><td>${esc(v.mn)} <span class="muted">· ${esc(v.city)}</span></td><td>${pill(v.s)}</td><td>${esc(v.note) || '<span class="muted">ללא הערה</span>'}</td>
+          <td class="num">${fmt(v.t)} · ${esc(v.by)}</td><td>${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">פתיחה</a>` : '<span class="muted">אין</span>'}</td></tr>`).join('')}
+        </tbody></table></div>` : `<div class="state">אין סניפים פתוחים לטיפול. כל הביקורים האחרונים דווחו כתקינים.</div>`}
+    </section>
+    <section><div class="sec-head"><h2>כיסוי לפי מתחם</h2><input type="search" id="mq" placeholder="חיפוש מתחם או עיר" value="${esc(mq)}" aria-label="חיפוש מתחם או עיר"></div>
+      <div class="card scroll"><table><thead><tr><th>מתחם (לחיצה מציגה את הרשתות)</th><th>רשתות שבוקרו</th><th>ביקור אחרון</th></tr></thead><tbody>${mallRows || '<tr><td colspan="3" class="muted">לא נמצא מתחם מתאים.</td></tr>'}</tbody></table></div>
+      ${rows.length > mallLimit ? `<button class="btn" id="mmore" type="button">הצגת עוד מתחמים</button>` : ''}
+    </section>
+    <section><h2>פעילות לפי נציג</h2>
+      <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="4" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody></table></div>
+    </section>
+    <section><h2>ביקורים אחרונים</h2>
+      ${feed ? `<div class="feed">${feed}</div>` : `<div class="state">עדיין אין ביקורים בתקופה שנבחרה.</div>`}
+    </section></div>`;
+}
+let REPS = [];
+async function init() {
+  const u = new URL(location.href), k = u.searchParams.get('key');
+  if (k) { store('pm_admin', k); u.searchParams.delete('key'); history.replaceState(null, '', u.pathname + u.search); }
+  const key = k || store('pm_admin');
+  if (!API) { $('main').innerHTML = '<div class="state">הדאשבורד עדיין לא חובר לגיליון הביקורים.</div>'; $('asof').textContent = ''; return; }
+  if (!key) { $('main').innerHTML = '<div class="state">כדי לצפות בלוח צריך להיכנס דרך הקישור שמופיע בלשונית "הגדרות" בגיליון.</div>'; $('asof').textContent = ''; return; }
+  try {
+    const [d, r] = await Promise.all([fetch('data.json').then(x => x.json()), fetch(API + '?action=dash&key=' + encodeURIComponent(key)).then(x => x.json())]);
+    if (!r.ok) throw new Error('key');
+    D = d; V = r.visits; REPS = r.reps || [];
+    $('repsel').innerHTML = '<option value="">כל הנציגים</option>' + [...new Set([...REPS, ...V.map(v => v.by)])].sort().map(n => `<option>${esc(n)}</option>`).join('');
+    $('asof').textContent = 'מעודכן ל-' + new Date().toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' }) + ' · מקור: גיליון הביקורים';
+    draw();
+  } catch (e) {
+    $('main').innerHTML = `<div class="state">${e.message === 'key' ? 'הקישור אינו תקף. יש להיכנס דרך הקישור העדכני בלשונית "הגדרות" בגיליון.' : 'הנתונים לא נטענו. בדקו את החיבור לרשת ורעננו את הדף.'}</div>`;
+    $('asof').textContent = '';
+  }
+}
+$('period').addEventListener('change', draw); $('repsel').addEventListener('change', draw);
+$('main').addEventListener('click', e => { if (e.target.id === 'mmore') { mallLimit += 25; draw(); } });
+$('main').addEventListener('input', e => { if (e.target.id === 'mq') { mq = e.target.value; mallLimit = 25; draw(); const i = $('mq'); i.focus(); i.setSelectionRange(mq.length, mq.length); } });
+init();
+</script>
+</body>
+</html>
