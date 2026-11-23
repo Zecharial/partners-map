@@ -80,6 +80,11 @@ h2{font-family:var(--display);font-weight:400;font-size:1.2rem;margin:10px 0 0}
 .vis{display:flex;flex-direction:column;gap:6px;padding:0 10px 10px;margin-top:auto;font-size:.8rem;text-align:center}
 .vstat{font-weight:700}.vstat.s0{color:var(--ok)}.vstat.s1{color:var(--warn)}.vstat.s2{color:var(--bad)}
 .vwhen{color:var(--muted)}
+.vdone{display:block;background:var(--ok);color:var(--surface);font-weight:700;font-size:.8rem;text-align:center;padding:3px 6px}
+.tile.done .art{opacity:.45}
+.tile.done .vbtn{border-color:var(--line);color:var(--muted)}
+.mall-prog{font-size:.82rem;color:var(--brand);font-weight:500}
+.dwarn{margin:0;padding:10px 12px;border-radius:12px;background:var(--bg);border:1.5px solid var(--warn);font-size:.9rem}
 .vbtn{font:inherit;font-size:.85rem;font-weight:500;padding:7px 8px;border-radius:10px;border:1.5px solid var(--brand);background:transparent;color:var(--brand);cursor:pointer}
 .vbtn:hover{background:var(--brand);color:var(--brand-ink)}
 .progress{font-size:.9rem;color:var(--muted);margin:0}
@@ -130,6 +135,7 @@ dialog::backdrop{background:rgba(8,14,28,.6)}
         <label><input type="radio" name="status" id="st1" value="יש בעיה"><span>יש בעיה</span></label>
         <label><input type="radio" name="status" id="st2" value="סניף סגור"><span>סניף סגור</span></label>
       </div>
+      <p class="dwarn" id="vwarn" hidden></p>
       <textarea id="vnote" placeholder="הערה (לא חובה)" maxlength="1000" aria-label="הערה"></textarea>
       <div class="photo"><label for="vphoto" id="vphoto-l">צילום או העלאת תמונה</label><input type="file" id="vphoto" accept="image/*" capture="environment"><img id="vprev" alt="תצוגה מקדימה של התמונה" hidden></div>
       <p class="derr" id="verr" hidden></p>
@@ -161,7 +167,7 @@ function art(ci, cls) {
 function mallCard(m) {
   const show = m.s.filter(i => D.chains[i].l).sort((a,b) => D.chains[b].b - D.chains[a].b).slice(0,5), rest = m.s.length - show.length;
   return `<li><a class="mall" href="#${m.i}">
-    <div class="mall-head"><div><h3 class="mall-name">${esc(m.n)}</h3><div class="mall-city">${esc(m.c)}</div></div>
+    <div class="mall-head"><div><h3 class="mall-name">${esc(m.n)}</h3><div class="mall-city">${esc(m.c)}</div>${rep ? `<div class="mall-prog">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length}</div>` : ''}</div>
     <span class="badge" title="מספר רשתות שותפות">${m.s.length}</span></div>
     <div class="strip">${show.map(i => art(i,'mini')).join('')}${rest > 0 ? `<span class="more-n">+${rest}</span>` : ''}</div></a></li>`;
 }
@@ -185,7 +191,8 @@ function home() {
     ${list.length > limit ? `<button class="btn" type="button" id="more">הצגת עוד ${Math.min(30, list.length - limit)} מתחמים</button>` : ''}`;
 }
 function mallView(m, keepScroll) {
-  const chains = [...m.s].sort((a,b) => D.chains[b].b - D.chains[a].b);
+  const seen = i => rep && latest[m.i + '|' + D.chains[i].n] ? 1 : 0;
+  const chains = [...m.s].sort((a,b) => seen(a) - seen(b) || D.chains[b].b - D.chains[a].b);  // אצל נציג: מה שטרם בוקר מופיע ראשון
   const others = D.malls.filter(x => x.c === m.c && x !== m).slice(0,12);
   const inMalls = new Set(D.malls.filter(x => x.c === m.c).flatMap(x => x.s));
   const street = (D.street[m.c] || []).filter(i => !inMalls.has(i));
@@ -196,7 +203,7 @@ function mallView(m, keepScroll) {
       <div class="big"><b>${m.s.length}</b><span>${m.s.length === 1 ? 'רשת שותפה' : 'רשתות שותפות'}</span></div>
     </section>
     ${rep ? `<p class="progress">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length} רשתות במתחם הזה.</p>` : ''}
-    <ul class="board">${chains.map(i => `<li><div class="tile">${art(i,'art')}<div class="cap">${esc(D.chains[i].n)}</div>${visitUI(m,i)}</div></li>`).join('')}</ul>
+    <ul class="board">${chains.map(i => `<li><div class="tile${seen(i) ? ' done' : ''}">${seen(i) ? '<span class="vdone">✓ בוקר</span>' : ''}${art(i,'art')}<div class="cap">${esc(D.chains[i].n)}</div>${visitUI(m,i)}</div></li>`).join('')}</ul>
     ${others.length ? `<h2>עוד מתחמים ב${esc(m.c)}</h2><div class="links">${others.map(x => `<a href="#${x.i}">${esc(x.n)} <b>${x.s.length}</b></a>`).join('')}</div>` : ''}
     ${street.length ? `<h2>שותפים נוספים ב${esc(m.c)}, מחוץ למתחמים</h2><div class="links">${street.map(i => `<a>${esc(D.chains[i].n)}</a>`).join('')}</div>` : ''}
     <p class="note">הרשימה מבוססת על דפי הסניפים של הרשתות. ייתכנו סניפים שנפתחו או נסגרו מאז העדכון האחרון.</p>`;
@@ -214,7 +221,7 @@ function visitUI(m, i) {
   if (!rep) return '';
   const v = latest[m.i + '|' + D.chains[i].n];
   return `<div class="vis">${v ? `<span class="vstat s${STAT.indexOf(v.s)}">${ICON[STAT.indexOf(v.s)] || ''} ${esc(v.s)}</span><span class="vwhen">${fmt(v.t)} · ${esc(v.by)}</span>` : '<span class="vwhen">טרם בוקר</span>'}
-    <button class="vbtn" type="button" data-visit="${i}">תיעוד ביקור</button></div>`;
+    <button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button></div>`;
 }
 async function initRep() {
   if (!API) return;
@@ -227,10 +234,27 @@ async function initRep() {
     if (!me.ok) return;
     rep = me.name; $('who').textContent = 'שלום, ' + rep; $('who').hidden = false;
     render();
-    const v = await (await fetch(API + '?action=visits&r=' + encodeURIComponent(token))).json();
-    if (v.ok) { v.latest.forEach(x => latest[x.m + '|' + x.c] = x); render(); }
+    await loadVisits(true);
   } catch (e) { /* בלי רשת האתר ממשיך לעבוד לצפייה בלבד */ }
 }
+/* ביקורים של כל הנציגים: נטענים בכניסה, בכל מעבר בין דפים ובחזרה לאתר, כדי שלא יבקרו פעמיים באותו סניף */
+let lastLoad = 0;
+async function loadVisits(force) {
+  if (!rep || $('dlg').open || (!force && Date.now() - lastLoad < 15000)) return;
+  lastLoad = Date.now();
+  try {
+    const v = await (await fetch(API + '?action=visits&r=' + encodeURIComponent(token))).json();
+    if (!v.ok || $('dlg').open) return;
+    const sig = JSON.stringify(v.latest.map(x => [x.m, x.c, x.t]).sort());
+    if (sig === loadVisits.sig) return;
+    loadVisits.sig = sig; latest = {}; v.latest.forEach(x => latest[x.m + '|' + x.c] = x);
+    const y = scrollY, m = byId[location.hash.slice(1)];
+    if (m) mallView(m, true); else home();
+    scrollTo(0, y);
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadVisits(); });
+setInterval(() => { if (!document.hidden) loadVisits(); }, 60000);
 function shrink(file, max, q) {
   return new Promise((ok, no) => {
     const im = new Image(), url = URL.createObjectURL(file);
@@ -270,6 +294,9 @@ function openVisit(m, i) {
   cur = { m, chain: D.chains[i].n }; photo = thumb = '';
   $('vform').reset(); $('vprev').hidden = true; $('verr').hidden = true; $('vphoto-l').textContent = 'צילום או העלאת תמונה';
   $('dlg-sub').textContent = cur.chain + ' · ' + m.n;
+  const prev = latest[m.i + '|' + cur.chain];
+  $('vwarn').hidden = !prev;
+  if (prev) $('vwarn').textContent = 'הסניף הזה כבר בוקר ב-' + fmt(prev.t) + ' על ידי ' + prev.by + ' (' + prev.s + '). אפשר לתעד ביקור נוסף אם צריך.';
   $('dlg').showModal();
 }
 function render() {
@@ -288,7 +315,7 @@ app.addEventListener('error', e => {  // לוגו שלא נטען מוחלף ב�
   if (im.tagName === 'IMG' && im.dataset.n) { const p = im.parentElement; p.classList.add('txt'); p.textContent = im.dataset.n; }
 }, true);
 q.addEventListener('input', () => { limit = 30; if (byId[location.hash.slice(1)]) location.hash = ''; else home(); });
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => { render(); loadVisits(); });
 render();
 initRep();
 </script>
