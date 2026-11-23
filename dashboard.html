@@ -156,7 +156,7 @@ function draw() {
 let REPS = [];
 async function init() {
   const u = new URL(location.href), k = u.searchParams.get('key');
-  if (k) { store('pm_admin', k); u.searchParams.delete('key'); history.replaceState(null, '', u.pathname + u.search); }
+  if (k) store('pm_admin', k);
   const key = k || store('pm_admin');
   if (!API) { $('main').innerHTML = '<div class="state">הדאשבורד עדיין לא חובר לגיליון הביקורים.</div>'; $('asof').textContent = ''; return; }
   if (!key) { $('main').innerHTML = '<div class="state">כדי לצפות בלוח צריך להיכנס דרך הקישור שמופיע בלשונית "הגדרות" בגיליון.</div>'; $('asof').textContent = ''; return; }

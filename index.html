@@ -283,7 +283,7 @@ function visitUI(m, i) {
 async function initRep() {
   if (!API) return;
   const u = new URL(location.href), r = u.searchParams.get('r');
-  if (r) { store('pm_rep', r); u.searchParams.delete('r'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+  if (r) store('pm_rep', r);  // הקוד נשאר בכתובת בכוונה: כך הוא עובר הלאה כשמעתיקים את הכתובת או פותחים אותה בדפדפן אחר
   token = r || store('pm_rep') || '';
   if (!token) return;
   try {
