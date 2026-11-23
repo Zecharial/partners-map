@@ -87,6 +87,7 @@ h2{font-family:var(--display);font-weight:400;font-size:1.2rem;margin:10px 0 0}
 .vlock{color:var(--muted);font-weight:500;padding:6px 4px;border-radius:10px;border:1.5px dashed var(--line)}
 .own{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--ink);color:var(--bg);margin-top:4px}
 .own.me{background:var(--signal);color:var(--signal-ink)}
+.own.ok{background:var(--ok);color:var(--surface)}
 .claim{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:var(--r);background:var(--surface);border:1.5px solid var(--line)}
 .claim.me{border-color:var(--signal)}
 .claim p{margin:0;min-width:0;flex:1 1 220px}.claim small{display:block;color:var(--muted)}
@@ -230,7 +231,7 @@ function mallView(m, keepScroll) {
 /* ---------- תיעוד ביקורים: פעיל רק למי שנכנס עם קישור אישי של נציג ---------- */
 const API = "https://script.google.com/macros/s/AKfycbxhZaCkfzyOQfSsrlGWTc4DH9TaEPVk2fbt9TjNSP-Q4LDqe5xrmMS7QwZgIDRzH-Y/exec";
 const STAT = ['תקין','יש בעיה','סניף סגור'], ICON = ['✓','!','✕'];
-let rep = null, token = '', latest = {}, claims = {}, BLOCK = 3, cur = null, photo = '', thumb = '';
+let rep = null, token = '', latest = {}, claims = {}, done = {}, BLOCK = 3, cur = null, photo = '', thumb = '';
 const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
@@ -246,7 +247,8 @@ function leftIn(m) {
 const nLeft = n => n === 1 ? 'נשארה רשת אחת' : 'נשארו ' + n + ' רשתות';
 function ownTag(m) {
   const c = rep && claims[m.i];
-  return c ? `<div class="own${c.mine ? ' me' : ''}">${c.mine ? 'על שמך' : 'על שם ' + esc(c.by)}</div>` : '';
+  if (c) return `<div class="own${c.mine ? ' me' : ''}">${c.mine ? 'על שמך' : 'על שם ' + esc(c.by)}</div>`;
+  return rep && done[m.i] ? `<div class="own ok">✓ הושלם · ${esc(done[m.i].by)}</div>` : '';
 }
 function claimUI(m) {
   if (!rep) return '';
@@ -254,11 +256,13 @@ function claimUI(m) {
   if (c && c.mine) return `<div class="claim me"><p><b>המתחם רשום על שמך.</b><small>${nLeft(leftIn(m))} לעדכון. אחרי שתסיימו את כולן אפשר יהיה לבחור את המתחם הבא.</small></p></div>`;
   if (c) return `<div class="claim"><p><b>המתחם רשום על שם ${esc(c.by)}.</b><small>כדי למנוע כפילות, כדאי לבחור מתחם אחר.</small></p></div>`;
   if (mine && leftIn(mine) > 0) return `<div class="claim"><p><b>המתחם פנוי.</b><small>קודם צריך לסיים את <a href="#${mine.i}">${esc(mine.n)}</a>: ${nLeft(leftIn(mine))} לעדכון.</small></p></div>`;
+  if (done[m.i]) return `<div class="claim"><p><b>✓ המתחם הושלם ב-${fmt(done[m.i].t)} על ידי ${esc(done[m.i].by)}.</b><small>אין צורך לקחת אותו שוב, אלא אם התבקשתם לעשות בו סבב נוסף.</small></p>${mine && leftIn(mine) > 0 ? '' : '<button type="button" class="no" data-claim="claim">סבב נוסף על שמי</button>'}</div>`;
   return `<div class="claim"><p><b>המתחם פנוי.</b><small>לוקחים מתחם אחד בכל פעם, ומסיימים את כל הרשתות שבו לפני שעוברים לבא.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
 }
 function applyState(v) {
   latest = {}; v.latest.forEach(x => latest[x.m + '|' + x.c] = x);
   claims = {}; (v.claims || []).forEach(c => claims[c.m] = c);
+  done = {}; (v.done || []).forEach(c => done[c.m] = c);
   if (v.block != null) BLOCK = v.block;
 }
 async function sendClaim(m, act, btn) {
@@ -298,7 +302,7 @@ async function loadVisits(force) {
   try {
     const v = await (await fetch(API + '?action=visits&r=' + encodeURIComponent(token))).json();
     if (!v.ok || $('dlg').open) return;
-    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), v.block]);
+    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), (v.done || []).map(c => [c.m, c.t]).sort(), v.block]);
     if (sig === loadVisits.sig) return;
     loadVisits.sig = sig; applyState(v);
     const y = scrollY, m = byId[location.hash.slice(1)];
