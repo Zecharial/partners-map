@@ -113,12 +113,13 @@ function draw() {
 
   // פעילות לפי נציג
   const byRep = {};
-  inP.forEach(v => { const r = byRep[v.by] || (byRep[v.by] = { n: 0, lt: 0, malls: new Set() }); r.n++; r.lt = Math.max(r.lt, v.t); r.malls.add(v.m); });
+  inP.forEach(v => { const r = byRep[v.by] || (byRep[v.by] = { n: 0, lt: 0, malls: new Set(), ks: {} }); r.n++; r.lt = Math.max(r.lt, v.t); r.malls.add(v.m);
+    const key = v.m + '|' + v.c; if (v.k != null && !(r.ks[key] && r.ks[key].t > v.t)) r.ks[key] = v; });  // קופאיות: לפי הביקור האחרון של הנציג בכל סניף, כדי לא לספור סניף פעמיים
   const repNames = [...new Set([...REPS, ...Object.keys(byRep)])].filter(n => !who || n === who).sort((a, b) => (byRep[b]?.n || 0) - (byRep[a]?.n || 0));
   const maxN = Math.max(1, ...Object.values(byRep).map(r => r.n));
-  const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set() };
+  const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set(), ks: {} };
     return `<tr><td>${esc(n)}</td><td><div class="meter"><div class="bar"><i style="width:${r.n / maxN * 100}%"></i></div><span class="num">${r.n}</span></div></td>
-      <td class="num">${r.malls.size}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
+      <td class="num">${r.malls.size}</td><td class="num">${Object.values(r.ks).reduce((a, v) => a + v.k, 0).toLocaleString('he-IL')}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
 
   const feed = [...inP].sort((a, b) => b.t - a.t).slice(0, 30).map(v => `<div class="visit">
       ${safeImg(v.thumb) ? `<img src="${safeImg(v.thumb)}" alt="תמונה מהביקור">` : '<div class="noimg"></div>'}
@@ -147,7 +148,7 @@ function draw() {
       ${rows.length > mallLimit ? `<button class="btn" id="mmore" type="button">הצגת עוד מתחמים</button>` : ''}
     </section>
     <section><h2>פעילות לפי נציג</h2>
-      <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים שבוקרו</th><th>מתחמים על שמו</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="5" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody></table></div>
+      <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים שבוקרו</th><th>קופאיות</th><th>מתחמים על שמו</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="6" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody></table></div>
     </section>
     <section><h2>ביקורים אחרונים</h2>
       ${feed ? `<div class="feed">${feed}</div>` : `<div class="state">עדיין אין ביקורים בתקופה שנבחרה.</div>`}
