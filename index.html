@@ -153,7 +153,7 @@ dialog::backdrop{background:rgba(8,14,28,.6)}
       <div class="kfield"><label for="vcash">מספר קופאיות</label>
         <div class="kstep"><button type="button" id="kminus" aria-label="פחות קופאית אחת">−</button><input id="vcash" type="number" inputmode="numeric" min="0" max="200" placeholder="?"><button type="button" id="kplus" aria-label="עוד קופאית אחת">+</button></div></div>
       <textarea id="vnote" placeholder="הערה (לא חובה)" maxlength="1000" aria-label="הערה"></textarea>
-      <div class="photo"><label for="vphoto" id="vphoto-l">צילום או העלאת תמונה</label><input type="file" id="vphoto" accept="image/*" capture="environment"><img id="vprev" alt="תצוגה מקדימה של התמונה" hidden></div>
+      <div class="photo"><label for="vphoto" id="vphoto-l">צילום או העלאת תמונה</label><input type="file" id="vphoto" accept="image/*"><img id="vprev" alt="תצוגה מקדימה של התמונה" hidden></div>
       <p class="derr" id="verr" hidden></p>
       <div class="drow"><button type="submit" class="go" id="vsend">שמירת הביקור</button><button type="button" class="no" id="vcancel">ביטול</button></div>
     </form>
@@ -330,7 +330,7 @@ $('vphoto').addEventListener('change', async e => {
   try {
     photo = await shrink(f, 1280, .75); thumb = await shrink(f, 160, .6);
     $('vprev').src = thumb; $('vprev').hidden = false; $('vphoto-l').textContent = 'החלפת התמונה';
-  } catch (err) { photo = thumb = ''; $('verr').textContent = 'לא הצלחנו לקרוא את התמונה. נסו לצלם שוב.'; $('verr').hidden = false; }
+  } catch (err) { photo = thumb = ''; $('verr').textContent = 'לא הצלחנו לקרוא את התמונה. נסו לצלם או לבחור תמונה אחרת.'; $('verr').hidden = false; }
 });
 $('vcancel').addEventListener('click', () => $('dlg').close());
 const bump = d => { const i = $('vcash'); i.value = Math.max(0, Math.min(200, (parseInt(i.value, 10) || 0) + d)); };
