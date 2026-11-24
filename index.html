@@ -272,8 +272,8 @@ function claimUI(m) {
   const c = claims[m.i], mine = myMall();
   if (c && c.mine) return `<div class="claim me"><p><b>המתחם רשום על שמך.</b><small>${nLeft(leftIn(m))} לעדכון. אחרי שתסיימו את כולן אפשר יהיה לבחור את המתחם הבא.</small></p></div>`;
   if (c) return `<div class="claim"><p><b>המתחם רשום על שם ${esc(c.by)}.</b><small>תיעוד ביקורים כאן פתוח רק ל${esc(c.by)}. בחרו מתחם אחר.</small></p></div>`;
+  if (done[m.i]) return `<div class="claim"><p><b>✓ המתחם הושלם ב-${fmt(done[m.i].t)} על ידי ${esc(done[m.i].by)}.</b><small>אין צורך לבקר בו שוב. בחרו מתחם אחר.</small></p></div>`;
   if (mine && leftIn(mine) > 0) return `<div class="claim"><p><b>המתחם פנוי.</b><small>קודם צריך לסיים את <a href="#${mine.i}">${esc(mine.n)}</a>: ${nLeft(leftIn(mine))} לעדכון.</small></p></div>`;
-  if (done[m.i]) return `<div class="claim"><p><b>✓ המתחם הושלם ב-${fmt(done[m.i].t)} על ידי ${esc(done[m.i].by)}.</b><small>אין צורך לקחת אותו שוב, אלא אם התבקשתם לעשות בו סבב נוסף.</small></p>${mine && leftIn(mine) > 0 ? '' : '<button type="button" class="no" data-claim="claim">סבב נוסף על שמי</button>'}</div>`;
   return `<div class="claim"><p><b>המתחם פנוי.</b><small>כדי לתעד כאן ביקורים צריך קודם לקחת אותו על שמך. לוקחים מתחם אחד בכל פעם, ומסיימים את כל הרשתות שבו לפני שעוברים לבא.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
 }
 function applyState(v) {
