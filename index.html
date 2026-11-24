@@ -244,6 +244,23 @@ function leftIn(m) {
   const c = claims[m.i], from = c ? c.t - BLOCK * 864e5 : 0;
   return m.s.filter(i => { const v = latest[m.i + '|' + D.chains[i].n]; return !(v && v.t >= from); }).length;
 }
+const csOf = m => m.s.map(i => D.chains[i].n);
+/* מתחם שכל הרשתות שבו כבר עודכנו אבל עדיין רשום כפתוח (למשל כי רשת ירדה מהמיפוי): מבקשים מהשרת לסגור אותו */
+const synced = {};
+async function syncMine() {
+  const m = myMall();
+  if (!m || leftIn(m) > 0 || synced[m.i]) return;
+  synced[m.i] = 1;
+  try {
+    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act: 'sync', m: m.i, cs: csOf(m) }) })).json();
+    if (!res.ok || !res.latest) return;
+    applyState(res); loadVisits.sig = '';
+    const y = scrollY, v = byId[location.hash.slice(1)];
+    if (v) mallView(v, true); else home();
+    scrollTo(0, y);
+    if (res.finished) toast('סיימת את ' + m.n + '. אפשר לבחור את המתחם הבא');
+  } catch (e) {}
+}
 const nLeft = n => n === 1 ? 'נשארה רשת אחת' : 'נשארו ' + n + ' רשתות';
 function ownTag(m) {
   const c = rep && claims[m.i];
@@ -268,7 +285,7 @@ function applyState(v) {
 async function sendClaim(m, act, btn) {
   btn.disabled = true;
   try {
-    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act, m: m.i, mn: m.n, city: m.c, n: m.s.length }) })).json();
+    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act, m: m.i, mn: m.n, city: m.c, n: m.s.length, pm: (myMall() || {}).i, pcs: myMall() ? csOf(myMall()) : null }) })).json();
     if (!res.ok) { toast(res.error || 'הפעולה לא נשמרה'); await loadVisits(true); return; }
     applyState(res); loadVisits.sig = ''; mallView(m, true);
     toast(m.n + ' רשום עכשיו על שמך');
@@ -308,6 +325,7 @@ async function loadVisits(force) {
     const y = scrollY, m = byId[location.hash.slice(1)];
     if (m) mallView(m, true); else home();
     scrollTo(0, y);
+    syncMine();
   } catch (e) {}
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadVisits(); });
@@ -342,7 +360,7 @@ $('vform').addEventListener('submit', async e => {
   if (cashiers === '' && status !== 'סניף סגור') { $('verr').textContent = 'כמה קופאיות יש בסניף? צריך למלא מספר לפני השמירה.'; $('verr').hidden = false; $('vcash').focus(); return; }
   const btn = $('vsend'); btn.disabled = true; btn.textContent = 'שומר...'; $('verr').hidden = true;
   try {
-    const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, status, cashiers, note: $('vnote').value, photo, thumb };
+    const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, cs: csOf(cur.m), status, cashiers, note: $('vnote').value, photo, thumb };
     const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })).json();
     if (!res.ok) { loadVisits.sig = ''; lastLoad = 0; throw new Error(res.error || ''); }
     if (res.latest) { applyState(res); loadVisits.sig = ''; } else latest[cur.m.i + '|' + cur.chain] = res.visit;
