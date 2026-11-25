@@ -100,6 +100,7 @@ h2{font-family:var(--display);font-weight:400;font-size:1.2rem;margin:10px 0 0}
 .vbtn{font:inherit;font-size:.85rem;font-weight:500;padding:7px 8px;border-radius:10px;border:1.5px solid var(--brand);background:transparent;color:var(--brand);cursor:pointer}
 .vbtn:hover{background:var(--brand);color:var(--brand-ink)}
 .progress{font-size:.9rem;color:var(--muted);margin:0}
+.cash{margin:0;padding:10px 14px;border-radius:var(--r);background:var(--ink);color:var(--bg);font-size:.95rem}.cash b{font-size:1.35rem;margin-inline-end:4px}
 dialog{border:none;border-radius:20px;padding:0;background:var(--surface);color:var(--ink);width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px)}
 dialog::backdrop{background:rgba(8,14,28,.6)}
 .dform{display:flex;flex-direction:column;gap:14px;padding:20px}
@@ -221,6 +222,7 @@ function mallView(m, keepScroll) {
       <div><p class="where">${esc(m.c)}</p><h1>${esc(m.n)}</h1></div>
       <div class="big"><b>${m.s.length}</b><span>${m.s.length === 1 ? 'רשת שותפה' : 'רשתות שותפות'}</span></div>
     </section>
+    ${cashIn(m) == null ? '' : `<p class="cash"><b>${cashIn(m).toLocaleString('he-IL')}</b> ${cashIn(m) === 1 ? 'קופאית תועדה' : 'קופאיות תועדו'} במתחם הזה עד עכשיו${claims[m.i] ? (claims[m.i].mine ? '' : ' על ידי ' + esc(claims[m.i].by)) : ' על ידי ' + esc(done[m.i].by)}</p>`}
     ${claimUI(m)}
     ${rep ? `<p class="progress">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length} רשתות במתחם הזה.</p>` : ''}
     <ul class="board">${chains.map(i => `<li><div class="tile${seen(i) ? ' done' : ''}">${seen(i) ? '<span class="vdone">✓ בוקר</span>' : ''}${art(i,'art')}<div class="cap">${esc(D.chains[i].n)}${adds[m.i + '|' + D.chains[i].n] ? `<small class="added">נוספה על ידי ${esc(adds[m.i + '|' + D.chains[i].n])}</small>` : ''}</div>${visitUI(m,i)}</div></li>`).join('')}</ul>
@@ -265,6 +267,15 @@ async function syncMine() {
     scrollTo(0, y);
     if (res.finished) toast('סיימת את ' + m.n + '. אפשר לבחור את המתחם הבא');
   } catch (e) {}
+}
+/* כמה קופאיות תועדו במתחם משויך (או שהושלם), לפי הביקור האחרון בכל רשת בסבב הנוכחי */
+function cashIn(m) {
+  const c = claims[m.i];
+  if (!rep || !(c || done[m.i])) return null;
+  const from = c ? c.t - BLOCK * 864e5 : 0;
+  let sum = 0, any = false;
+  m.s.forEach(i => { const v = latest[m.i + '|' + D.chains[i].n]; if (v && v.t >= from && v.k != null) { sum += v.k; any = true; } });
+  return any ? sum : (Object.values(latest).some(v => 'k' in v) ? 0 : null);  // null: הגיליון עדיין לא שולח את המספר
 }
 const nLeft = n => n === 1 ? 'נשארה רשת אחת' : 'נשארו ' + n + ' רשתות';
 function ownTag(m) {
