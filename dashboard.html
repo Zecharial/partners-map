@@ -56,6 +56,8 @@ details summary .mn{font-weight:700}
 .visit .body{min-width:0;display:flex;flex-direction:column;gap:2px;font-size:.88rem}
 .visit .t{font-weight:700;font-size:.95rem}
 .visit .note{overflow-wrap:anywhere}
+.btn.sm{padding:4px 14px;font-size:.85rem}
+.sec-head select{font:inherit;padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
 .btn{align-self:center;font:inherit;font-weight:500;padding:8px 20px;border-radius:999px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);cursor:pointer}
 .state{padding:40px 20px;text-align:center;color:var(--muted);border:1.5px dashed var(--line);border-radius:var(--r)}
 </style>
@@ -81,7 +83,7 @@ const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month
 const fmtT = t => fmt(t) + ' ' + new Date(t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });  // תאריך ושעה, לפי שעון ישראל
 const safeUrl = u => /^https:\/\//.test(u || '') ? u : '';
 const safeImg = u => /^data:image\/(jpeg|png|webp);base64,/.test(u || '') ? u : '';
-let D = null, V = [], CL = {}, AD = {}, mallLimit = 25, mq = '';
+let D = null, V = [], CL = {}, AD = {}, mallLimit = 25, mq = '', oc = '', KEY = '';
 
 function pill(s) { const i = STAT.indexOf(s); return `<span class="pill s${i}">${ICON[i] || ''} ${esc(s)}</span>`; }
 function draw() {
@@ -92,7 +94,10 @@ function draw() {
   V.forEach(v => { const k = v.m + '|' + v.c; if (!last[k] || last[k].t < v.t) last[k] = v; });
   const pairs = D.malls.reduce((n, m) => n + m.s.length, 0);
   const seenP = new Set(inP.map(v => v.m + '|' + v.c)), mallsP = new Set(inP.map(v => v.m));
-  const open = Object.values(last).filter(v => v.s !== 'תקין').sort((a, b) => b.t - a.t);
+  const open = Object.values(last).filter(v => v.s !== 'תקין' && !v.h).sort((a, b) => b.t - a.t);  // ביקור שסומן "טופל" יורד מהרשימה
+  const openBy = {}; open.forEach(v => openBy[v.c] = (openBy[v.c] || 0) + 1);
+  if (oc && !openBy[oc]) oc = '';
+  const openShown = oc ? open.filter(v => v.c === oc) : open.slice(0, 50);
   const kpi = (b, lab, small) => `<div class="kpi"><span class="lab">${lab}</span><b>${b}</b><small>${small}</small></div>`;
   const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
   const pctTxt = (a, b) => a && pct(a, b) < 1 ? 'פחות מ-1' : pct(a, b);
@@ -152,11 +157,11 @@ function draw() {
       ${kpi(open.filter(v => v.s === 'סניף סגור').length, 'סניפים שדווחו כסגורים', 'לפי הביקור האחרון בכל סניף')}
       ${kpi(Object.values(last).reduce((n, v) => n + (v.k || 0), 0).toLocaleString('he-IL'), 'קופאיות בסניפים שבוקרו', (n => n === 1 ? 'בסניף אחד, לפי הביקור האחרון' : `ב-${n} סניפים, לפי הביקור האחרון`)(Object.values(last).filter(v => v.k != null).length))}
     </div>
-    <section><h2>דורש טיפול</h2>
-      ${open.length ? `<div class="card scroll"><table><thead><tr><th>רשת</th><th>מתחם</th><th>מצב</th><th>קופאיות</th><th>הערה</th><th>דווח</th><th>תמונה</th></tr></thead><tbody>
-        ${open.slice(0, 50).map(v => `<tr><td><b>${esc(v.c)}</b></td><td>${esc(v.mn)} <span class="muted">· ${esc(v.city)}</span></td><td>${pill(v.s)}</td><td class="num">${v.k == null ? '<span class="muted">לא דווח</span>' : v.k}</td><td>${esc(v.note) || '<span class="muted">ללא הערה</span>'}</td>
-          <td class="num">${fmtT(v.t)} · ${esc(v.by)}</td><td>${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">פתיחה</a>` : '<span class="muted">אין</span>'}</td></tr>`).join('')}
-        </tbody></table></div>` : `<div class="state">אין סניפים פתוחים לטיפול. כל הביקורים האחרונים דווחו כתקינים.</div>`}
+    <section><div class="sec-head"><h2>דורש טיפול</h2>${open.length ? `<select id="oc" aria-label="סינון לפי רשת"><option value="">כל הרשתות (${open.length})</option>${Object.keys(openBy).sort((a, b) => openBy[b] - openBy[a] || a.localeCompare(b, 'he')).map(c => `<option value="${esc(c)}"${c === oc ? ' selected' : ''}>${esc(c)} (${openBy[c]})</option>`).join('')}</select>` : ''}</div>
+      ${open.length ? `<div class="card scroll"><table><thead><tr><th>רשת</th><th>מתחם</th><th>מצב</th><th>קופאיות</th><th>הערה</th><th>דווח</th><th>תמונה</th><th>טיפול</th></tr></thead><tbody>
+        ${openShown.map(v => `<tr><td><b>${esc(v.c)}</b></td><td>${esc(v.mn)} <span class="muted">· ${esc(v.city)}</span></td><td>${pill(v.s)}</td><td class="num">${v.k == null ? '<span class="muted">לא דווח</span>' : v.k}</td><td>${esc(v.note) || '<span class="muted">ללא הערה</span>'}</td>
+          <td class="num">${fmtT(v.t)} · ${esc(v.by)}</td><td>${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">פתיחה</a>` : '<span class="muted">אין</span>'}</td><td><button type="button" class="btn sm" data-h="${esc(v.id)}">טופל</button></td></tr>`).join('')}
+        </tbody></table></div>${!oc && open.length > 50 ? `<p class="muted">מוצגים 50 האחרונים מתוך ${open.length}. סינון לפי רשת מציג את כל הבעיות שלה.</p>` : ''}` : `<div class="state">אין סניפים פתוחים לטיפול. כל הביקורים האחרונים תקינים או טופלו.</div>`}
     </section>
     <section><div class="sec-head"><h2>כיסוי לפי מתחם</h2><input type="search" id="mq" placeholder="חיפוש מתחם או עיר" value="${esc(mq)}" aria-label="חיפוש מתחם או עיר"></div>
       <div class="card scroll"><table><thead><tr><th>מתחם (לחיצה מציגה את הרשתות)</th><th>רשתות שבוקרו</th><th>על שם</th><th>ביקור אחרון</th></tr></thead><tbody>${mallRows || '<tr><td colspan="4" class="muted">לא נמצא מתחם מתאים.</td></tr>'}</tbody></table></div>
@@ -175,7 +180,7 @@ let REPS = [];
 async function init() {
   const u = new URL(location.href), k = u.searchParams.get('key');
   if (k) store('pm_admin', k);
-  const key = k || store('pm_admin');
+  const key = k || store('pm_admin'); KEY = key;
   if (!API) { $('main').innerHTML = '<div class="state">הדאשבורד עדיין לא חובר לגיליון הביקורים.</div>'; $('asof').textContent = ''; return; }
   if (!key) { $('main').innerHTML = '<div class="state">כדי לצפות בלוח צריך להיכנס דרך הקישור שמופיע בלשונית "הגדרות" בגיליון.</div>'; $('asof').textContent = ''; return; }
   try {
@@ -194,6 +199,16 @@ async function init() {
 }
 $('period').addEventListener('change', draw); $('repsel').addEventListener('change', draw);
 $('main').addEventListener('click', e => { if (e.target.id === 'mmore') { mallLimit += 25; draw(); } });
+$('main').addEventListener('change', e => { if (e.target.id === 'oc') { oc = e.target.value; draw(); } });
+/* "טופל": הבעיה יורדת מיד מהרשימה ונשמרת בגיליון; אם השמירה נכשלה היא חוזרת */
+$('main').addEventListener('click', async e => {
+  const b = e.target.closest('[data-h]'); if (!b) return;
+  const v = V.find(x => String(x.id) === b.dataset.h); if (!v) return;
+  v.h = Date.now(); draw();
+  let ok = false;
+  try { ok = (await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ act: 'handled', key: KEY, id: v.id }) })).json()).ok; } catch (err) {}
+  if (!ok) { v.h = 0; draw(); alert('הסימון לא נשמר. בדקו את החיבור לרשת, ושהסקריפט המעודכן פרוס בגיליון.'); }
+});
 $('main').addEventListener('input', e => { if (e.target.id === 'mq') { mq = e.target.value; mallLimit = 25; draw(); const i = $('mq'); i.focus(); i.setSelectionRange(mq.length, mq.length); } });
 init();
 </script>
