@@ -186,7 +186,8 @@ async function init() {
   try {
     const [d, r] = await Promise.all([fetch('data.json').then(x => x.json()), fetch(API + '?action=dash&key=' + encodeURIComponent(key)).then(x => x.json())]);
     if (!r.ok) throw new Error('key');
-    D = d; V = r.visits; REPS = r.reps || []; CL = {}; (r.done || []).forEach(c => CL[c.m] = '✓ הושלם · ' + c.by); (r.claims || []).forEach(c => CL[c.m] = c.by);
+    D = d; const live = new Set(D.chains.map(c => c.n)); V = r.visits.filter(v => live.has(v.c));  // ביקורים ברשתות שירדו מהמיפוי לא מוצגים
+    REPS = r.reps || []; CL = {}; (r.done || []).forEach(c => CL[c.m] = '✓ הושלם · ' + c.by); (r.claims || []).forEach(c => CL[c.m] = c.by);
     AD = {}; const ci = Object.fromEntries(D.chains.map((c, i) => [c.n, i])), mi = Object.fromEntries(D.malls.map(m => [m.i, m]));
     (r.adds || []).forEach(a => { const m = mi[a.m], i = ci[a.c]; if (!m || i == null || m.s.includes(i)) return; m.s.push(i); AD[a.m + '|' + a.c] = a.by; });  // רשתות שנציגים הוסיפו למתחמים
     $('repsel').innerHTML = '<option value="">כל הנציגים</option>' + [...new Set([...REPS, ...V.map(v => v.by)])].sort().map(n => `<option>${esc(n)}</option>`).join('');
