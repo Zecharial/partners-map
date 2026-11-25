@@ -78,6 +78,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' });
+const fmtT = t => fmt(t) + ' ' + new Date(t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });  // תאריך ושעה, לפי שעון ישראל
 const safeUrl = u => /^https:\/\//.test(u || '') ? u : '';
 const safeImg = u => /^data:image\/(jpeg|png|webp);base64,/.test(u || '') ? u : '';
 let D = null, V = [], CL = {}, AD = {}, mallLimit = 25, mq = '';
@@ -109,7 +110,7 @@ function draw() {
         <div class="chainlist">${r.m.s.map(i => `<span class="${r.vis.includes(i) ? 'v' : ''}">${r.vis.includes(i) ? '✓ ' : ''}${esc(D.chains[i].n)}${AD[r.m.i + '|' + D.chains[i].n] ? ' (נוספה על ידי ' + esc(AD[r.m.i + '|' + D.chains[i].n]) + ')' : ''}</span>`).join('')}</div></details></td>
       <td><div class="meter"><div class="bar"><i style="width:${pct(r.vis.length, r.m.s.length)}%"></i></div><span class="num">${r.vis.length} מתוך ${r.m.s.length}</span></div></td>
       <td>${CL[r.m.i] ? esc(CL[r.m.i]) : '<span class="muted">פנוי</span>'}</td>
-      <td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
+      <td class="num">${r.lt ? fmtT(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
 
   // פעילות לפי נציג
   const byRep = {};
@@ -119,12 +120,12 @@ function draw() {
   const maxN = Math.max(1, ...Object.values(byRep).map(r => r.n));
   const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set(), ks: {} };
     return `<tr><td>${esc(n)}</td><td><div class="meter"><div class="bar"><i style="width:${r.n / maxN * 100}%"></i></div><span class="num">${r.n}</span></div></td>
-      <td class="num">${r.malls.size}</td><td class="num">${Object.values(r.ks).reduce((a, v) => a + v.k, 0).toLocaleString('he-IL')}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
+      <td class="num">${r.malls.size}</td><td class="num">${Object.values(r.ks).reduce((a, v) => a + v.k, 0).toLocaleString('he-IL')}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmtT(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
 
   const feed = [...inP].sort((a, b) => b.t - a.t).slice(0, 30).map(v => `<div class="visit">
       ${safeImg(v.thumb) ? `<img src="${safeImg(v.thumb)}" alt="תמונה מהביקור">` : '<div class="noimg"></div>'}
       <div class="body"><span class="t">${esc(v.c)}</span><span class="muted">${esc(v.mn)} · ${esc(v.city)}</span>
-      <span>${pill(v.s)} <span class="muted">${fmt(v.t)} · ${esc(v.by)}</span></span>
+      <span>${pill(v.s)} <span class="muted">${fmtT(v.t)} · ${esc(v.by)}</span></span>
       ${v.k == null ? '' : `<span>${v.k === 1 ? 'קופאית אחת' : v.k + ' קופאיות'}</span>`}
       ${v.note ? `<span class="note">${esc(v.note)}</span>` : ''}${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">לתמונה המלאה</a>` : ''}</div></div>`).join('');
 
@@ -140,7 +141,7 @@ function draw() {
     <section><h2>דורש טיפול</h2>
       ${open.length ? `<div class="card scroll"><table><thead><tr><th>רשת</th><th>מתחם</th><th>מצב</th><th>קופאיות</th><th>הערה</th><th>דווח</th><th>תמונה</th></tr></thead><tbody>
         ${open.slice(0, 50).map(v => `<tr><td><b>${esc(v.c)}</b></td><td>${esc(v.mn)} <span class="muted">· ${esc(v.city)}</span></td><td>${pill(v.s)}</td><td class="num">${v.k == null ? '<span class="muted">לא דווח</span>' : v.k}</td><td>${esc(v.note) || '<span class="muted">ללא הערה</span>'}</td>
-          <td class="num">${fmt(v.t)} · ${esc(v.by)}</td><td>${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">פתיחה</a>` : '<span class="muted">אין</span>'}</td></tr>`).join('')}
+          <td class="num">${fmtT(v.t)} · ${esc(v.by)}</td><td>${safeUrl(v.photo) ? `<a href="${safeUrl(v.photo)}" target="_blank" rel="noopener">פתיחה</a>` : '<span class="muted">אין</span>'}</td></tr>`).join('')}
         </tbody></table></div>` : `<div class="state">אין סניפים פתוחים לטיפול. כל הביקורים האחרונים דווחו כתקינים.</div>`}
     </section>
     <section><div class="sec-head"><h2>כיסוי לפי מתחם</h2><input type="search" id="mq" placeholder="חיפוש מתחם או עיר" value="${esc(mq)}" aria-label="חיפוש מתחם או עיר"></div>
