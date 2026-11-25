@@ -80,7 +80,7 @@ const store = (k, v) => { try { if (v === undefined) return localStorage.getItem
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric', year: '2-digit' });
 const safeUrl = u => /^https:\/\//.test(u || '') ? u : '';
 const safeImg = u => /^data:image\/(jpeg|png|webp);base64,/.test(u || '') ? u : '';
-let D = null, V = [], CL = {}, mallLimit = 25, mq = '';
+let D = null, V = [], CL = {}, AD = {}, mallLimit = 25, mq = '';
 
 function pill(s) { const i = STAT.indexOf(s); return `<span class="pill s${i}">${ICON[i] || ''} ${esc(s)}</span>`; }
 function draw() {
@@ -106,7 +106,7 @@ function draw() {
     .sort((a, b) => !!CL[b.m.i] - !!CL[a.m.i] || b.vis.length - a.vis.length || b.m.s.length - a.m.s.length);
   const mallRows = rows.slice(0, mallLimit).map(r => `<tr>
       <td><details><summary><span class="mn">${esc(r.m.n)}</span> <span class="muted">· ${esc(r.m.c)}</span></summary>
-        <div class="chainlist">${r.m.s.map(i => `<span class="${r.vis.includes(i) ? 'v' : ''}">${r.vis.includes(i) ? '✓ ' : ''}${esc(D.chains[i].n)}</span>`).join('')}</div></details></td>
+        <div class="chainlist">${r.m.s.map(i => `<span class="${r.vis.includes(i) ? 'v' : ''}">${r.vis.includes(i) ? '✓ ' : ''}${esc(D.chains[i].n)}${AD[r.m.i + '|' + D.chains[i].n] ? ' (נוספה על ידי ' + esc(AD[r.m.i + '|' + D.chains[i].n]) + ')' : ''}</span>`).join('')}</div></details></td>
       <td><div class="meter"><div class="bar"><i style="width:${pct(r.vis.length, r.m.s.length)}%"></i></div><span class="num">${r.vis.length} מתוך ${r.m.s.length}</span></div></td>
       <td>${CL[r.m.i] ? esc(CL[r.m.i]) : '<span class="muted">פנוי</span>'}</td>
       <td class="num">${r.lt ? fmt(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
@@ -165,6 +165,8 @@ async function init() {
     const [d, r] = await Promise.all([fetch('data.json').then(x => x.json()), fetch(API + '?action=dash&key=' + encodeURIComponent(key)).then(x => x.json())]);
     if (!r.ok) throw new Error('key');
     D = d; V = r.visits; REPS = r.reps || []; CL = {}; (r.done || []).forEach(c => CL[c.m] = '✓ הושלם · ' + c.by); (r.claims || []).forEach(c => CL[c.m] = c.by);
+    AD = {}; const ci = Object.fromEntries(D.chains.map((c, i) => [c.n, i])), mi = Object.fromEntries(D.malls.map(m => [m.i, m]));
+    (r.adds || []).forEach(a => { const m = mi[a.m], i = ci[a.c]; if (!m || i == null || m.s.includes(i)) return; m.s.push(i); AD[a.m + '|' + a.c] = a.by; });  // רשתות שנציגים הוסיפו למתחמים
     $('repsel').innerHTML = '<option value="">כל הנציגים</option>' + [...new Set([...REPS, ...V.map(v => v.by)])].sort().map(n => `<option>${esc(n)}</option>`).join('');
     $('asof').textContent = 'מעודכן ל-' + new Date().toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' }) + ' · מקור: גיליון הביקורים';
     draw();

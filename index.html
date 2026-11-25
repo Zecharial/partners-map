@@ -93,6 +93,8 @@ h2{font-family:var(--display);font-weight:400;font-size:1.2rem;margin:10px 0 0}
 .claim p{margin:0;min-width:0;flex:1 1 220px}.claim small{display:block;color:var(--muted)}
 .claim button{font:inherit;font-weight:700;padding:10px 16px;border-radius:12px;border:1.5px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
 .claim button.no{background:transparent;color:var(--ink)}
+.claim select{font:inherit;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);min-width:0;flex:1 1 160px;max-width:100%}
+.tile .cap .added{display:block;font-size:.72rem;color:var(--muted)}
 .claim button:disabled{opacity:.55;cursor:default}
 .dwarn{margin:0;padding:10px 12px;border-radius:12px;background:var(--bg);border:1.5px solid var(--warn);font-size:.9rem}
 .vbtn{font:inherit;font-size:.85rem;font-weight:500;padding:7px 8px;border-radius:10px;border:1.5px solid var(--brand);background:transparent;color:var(--brand);cursor:pointer}
@@ -221,7 +223,8 @@ function mallView(m, keepScroll) {
     </section>
     ${claimUI(m)}
     ${rep ? `<p class="progress">בוקרו ${m.s.filter(i => latest[m.i + '|' + D.chains[i].n]).length} מתוך ${m.s.length} רשתות במתחם הזה.</p>` : ''}
-    <ul class="board">${chains.map(i => `<li><div class="tile${seen(i) ? ' done' : ''}">${seen(i) ? '<span class="vdone">✓ בוקר</span>' : ''}${art(i,'art')}<div class="cap">${esc(D.chains[i].n)}</div>${visitUI(m,i)}</div></li>`).join('')}</ul>
+    <ul class="board">${chains.map(i => `<li><div class="tile${seen(i) ? ' done' : ''}">${seen(i) ? '<span class="vdone">✓ בוקר</span>' : ''}${art(i,'art')}<div class="cap">${esc(D.chains[i].n)}${adds[m.i + '|' + D.chains[i].n] ? `<small class="added">נוספה על ידי ${esc(adds[m.i + '|' + D.chains[i].n])}</small>` : ''}</div>${visitUI(m,i)}</div></li>`).join('')}</ul>
+    ${addUI(m)}
     ${others.length ? `<h2>עוד מתחמים ב${esc(m.c)}</h2><div class="links">${others.map(x => `<a href="#${x.i}">${esc(x.n)} <b>${x.s.length}</b></a>`).join('')}</div>` : ''}
     ${street.length ? `<h2>שותפים נוספים ב${esc(m.c)}, מחוץ למתחמים</h2><div class="links">${street.map(i => `<a>${esc(D.chains[i].n)}</a>`).join('')}</div>` : ''}
     <p class="note">הרשימה מבוססת על דפי הסניפים של הרשתות. ייתכנו סניפים שנפתחו או נסגרו מאז העדכון האחרון.</p>`;
@@ -231,7 +234,9 @@ function mallView(m, keepScroll) {
 /* ---------- תיעוד ביקורים: פעיל רק למי שנכנס עם קישור אישי של נציג ---------- */
 const API = "https://script.google.com/macros/s/AKfycbxhZaCkfzyOQfSsrlGWTc4DH9TaEPVk2fbt9TjNSP-Q4LDqe5xrmMS7QwZgIDRzH-Y/exec";
 const STAT = ['תקין','יש בעיה','סניף סגור'], ICON = ['✓','!','✕'];
-let rep = null, token = '', latest = {}, claims = {}, done = {}, BLOCK = 3, cur = null, photo = '', thumb = '';
+D.malls.forEach(m => m.s0 = m.s);  // הרשימה מהמיפוי, לפני רשתות שנציגים הוסיפו
+const CI = Object.fromEntries(D.chains.map((c, i) => [c.n, i]));
+let rep = null, token = '', latest = {}, claims = {}, done = {}, adds = {}, BLOCK = 3, cur = null, photo = '', thumb = '';
 const $ = id => document.getElementById(id);
 const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
 const fmt = t => new Date(t).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
@@ -276,10 +281,36 @@ function claimUI(m) {
   if (mine && leftIn(mine) > 0) return `<div class="claim"><p><b>המתחם פנוי.</b><small>קודם צריך לסיים את <a href="#${mine.i}">${esc(mine.n)}</a>: ${nLeft(leftIn(mine))} לעדכון.</small></p></div>`;
   return `<div class="claim"><p><b>המתחם פנוי.</b><small>כדי לתעד כאן ביקורים צריך קודם לקחת אותו על שמך. לוקחים מתחם אחד בכל פעם, ומסיימים את כל הרשתות שבו לפני שעוברים לבא.</small></p><button type="button" data-claim="claim">לקחת על שמי</button></div>`;
 }
+/* רשת שותפה שנמצאת במתחם וחסרה ברשימה: מי שהמתחם רשום על שמו מוסיף אותה מתוך רשימת השותפים */
+function addUI(m) {
+  if (!rep || !(claims[m.i] && claims[m.i].mine)) return '';
+  const opts = D.chains.map((c, i) => i).filter(i => !m.s.includes(i)).sort((a, b) => D.chains[a].n.localeCompare(D.chains[b].n, 'he'));
+  return `<div class="claim add"><p><b>רשת שותפה שחסרה כאן?</b><small>אם יש במתחם סניף של רשת שותפה שלא מופיעה ברשימה, מוסיפים אותה ומתעדים בה ביקור כרגיל.</small></p>
+    <select id="addsel" aria-label="בחירת רשת להוספה"><option value="">בחירת רשת</option>${opts.map(i => `<option>${esc(D.chains[i].n)}</option>`).join('')}</select>
+    <button type="button" class="no" data-add>הוספה למתחם</button></div>`;
+}
+async function sendAdd(m, btn) {
+  const chain = $('addsel').value;
+  if (!chain) { toast('קודם בוחרים רשת מהרשימה'); return; }
+  btn.disabled = true;
+  try {
+    const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ r: token, act: 'add', m: m.i, mn: m.n, city: m.c, chain }) })).json();
+    if (!res.ok || !res.latest) { toast(res.latest ? 'ההוספה לא נשמרה' : (res.error && !/חסרים פרטים/.test(res.error) ? res.error : 'ההוספה עדיין לא זמינה. נסו שוב מאוחר יותר.')); btn.disabled = false; return; }
+    applyState(res); loadVisits.sig = ''; mallView(m, true);
+    toast(chain + ' נוספה ל' + m.n);
+  } catch (e) { toast('ההוספה לא נשמרה. בדקו את החיבור לרשת.'); btn.disabled = false; }
+}
 function applyState(v) {
   latest = {}; v.latest.forEach(x => latest[x.m + '|' + x.c] = x);
   claims = {}; (v.claims || []).forEach(c => claims[c.m] = c);
   done = {}; (v.done || []).forEach(c => done[c.m] = c);
+  adds = {}; D.malls.forEach(m => m.s = m.s0);
+  (v.adds || []).forEach(a => {  // רשת שנציג הוסיף למתחם מצטרפת לרשימה שלו אצל כולם
+    const m = byId[a.m], i = CI[a.c];
+    if (!m || i == null || m.s0.includes(i)) return;
+    adds[a.m + '|' + a.c] = a.by;
+    if (!m.s.includes(i)) m.s = [...m.s, i];
+  });
   if (v.block != null) BLOCK = v.block;
 }
 async function sendClaim(m, act, btn) {
@@ -319,7 +350,7 @@ async function loadVisits(force) {
   try {
     const v = await (await fetch(API + '?action=visits&r=' + encodeURIComponent(token))).json();
     if (!v.ok || $('dlg').open) return;
-    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), (v.done || []).map(c => [c.m, c.t]).sort(), v.block]);
+    const sig = JSON.stringify([v.latest.map(x => [x.m, x.c, x.t]).sort(), (v.claims || []).map(c => [c.m, c.by]).sort(), (v.done || []).map(c => [c.m, c.t]).sort(), (v.adds || []).map(a => [a.m, a.c]).sort(), v.block]);
     if (sig === loadVisits.sig) return;
     loadVisits.sig = sig; applyState(v);
     const y = scrollY, m = byId[location.hash.slice(1)];
@@ -393,6 +424,8 @@ app.addEventListener('click', e => {
   if (vb && mm) openVisit(mm, +vb.dataset.visit);
   const cb = e.target.closest('[data-claim]');
   if (cb && mm) sendClaim(mm, cb.dataset.claim, cb);
+  const ab = e.target.closest('[data-add]');
+  if (ab && mm) sendAdd(mm, ab);
 });
 app.addEventListener('error', e => {  // לוגו שלא נטען מוחלף בשם הרשת
   const im = e.target;
