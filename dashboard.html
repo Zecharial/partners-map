@@ -112,6 +112,20 @@ function draw() {
       <td>${CL[r.m.i] ? esc(CL[r.m.i]) : '<span class="muted">פנוי</span>'}</td>
       <td class="num">${r.lt ? fmtT(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
 
+  // כיסוי לפי רשת: בכמה מהסניפים שלה (במתחמים הממופים) בוקר בתקופה
+  const chRows = D.chains.map((c, i) => {
+    const ms = D.malls.filter(m => m.s.includes(i)), vis = ms.filter(m => seenP.has(m.i + '|' + c.n));
+    const vs = inP.filter(v => v.c === c.n), lt = Math.max(0, ...vs.map(v => v.t)), ks = {};
+    vs.forEach(v => { if (v.k != null && !(ks[v.m] && ks[v.m].t > v.t)) ks[v.m] = v; });
+    return { c, ms, vis, lt, k: Object.values(ks).reduce((a, v) => a + v.k, 0) };
+  }).filter(r => r.ms.length).sort((a, b) => b.vis.length - a.vis.length || b.ms.length - a.ms.length || a.c.n.localeCompare(b.c.n, 'he'))
+    .map(r => `<tr>
+      <td><details><summary><span class="mn">${esc(r.c.n)}</span></summary>
+        <div class="chainlist">${r.ms.map(m => `<span class="${r.vis.includes(m) ? 'v' : ''}">${r.vis.includes(m) ? '✓ ' : ''}${esc(m.n)}${m.c ? ' · ' + esc(m.c) : ''}</span>`).join('')}</div></details></td>
+      <td><div class="meter"><div class="bar"><i style="width:${pct(r.vis.length, r.ms.length)}%"></i></div><span class="num">${r.vis.length} מתוך ${r.ms.length}</span></div></td>
+      <td class="num">${r.k.toLocaleString('he-IL')}</td>
+      <td class="num">${r.lt ? fmtT(r.lt) : '<span class="muted">לא בוקר</span>'}</td></tr>`).join('');
+
   // פעילות לפי נציג
   const byRep = {};
   inP.forEach(v => { const r = byRep[v.by] || (byRep[v.by] = { n: 0, lt: 0, malls: new Set(), ks: {} }); r.n++; r.lt = Math.max(r.lt, v.t); r.malls.add(v.m);
@@ -148,6 +162,8 @@ function draw() {
       <div class="card scroll"><table><thead><tr><th>מתחם (לחיצה מציגה את הרשתות)</th><th>רשתות שבוקרו</th><th>על שם</th><th>ביקור אחרון</th></tr></thead><tbody>${mallRows || '<tr><td colspan="4" class="muted">לא נמצא מתחם מתאים.</td></tr>'}</tbody></table></div>
       ${rows.length > mallLimit ? `<button class="btn" id="mmore" type="button">הצגת עוד מתחמים</button>` : ''}
     </section>
+    <section><h2>כיסוי לפי רשת</h2>
+      <div class="card scroll" style="max-height:560px;overflow-y:auto"><table><thead><tr><th>רשת (לחיצה מציגה את המתחמים)</th><th>סניפים שבוקרו</th><th>קופאיות</th><th>ביקור אחרון</th></tr></thead><tbody>${chRows}</tbody></table></div></section>
     <section><h2>פעילות לפי נציג</h2>
       <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים שבוקרו</th><th>קופאיות</th><th>מתחמים על שמו</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="6" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody></table></div>
     </section>
