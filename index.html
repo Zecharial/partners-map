@@ -106,8 +106,8 @@ dialog{border:none;border-radius:20px;padding:0;background:var(--surface);color:
 dialog::backdrop{background:rgba(8,14,28,.6)}
 .dform{display:flex;flex-direction:column;gap:14px;padding:20px}
 .dform h2{margin:0;font-size:1.3rem}.dform .sub{margin:0;color:var(--muted);font-size:.9rem}
-.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.opts label{display:flex;align-items:center;justify-content:center;text-align:center;padding:12px 6px;border-radius:12px;border:1.5px solid var(--line);cursor:pointer;font-weight:500;font-size:.92rem}
+.opts{display:grid;gap:6px}
+.opts label{display:flex;align-items:center;padding:10px 14px;border-radius:12px;border:1.5px solid var(--line);cursor:pointer;font-weight:500;font-size:.92rem}
 .opts input{position:absolute;opacity:0}
 .opts input:checked+span{font-weight:700}
 .opts label:has(input:checked){border-color:var(--ink);background:var(--ink);color:var(--bg)}
@@ -150,15 +150,19 @@ dialog::backdrop{background:rgba(8,14,28,.6)}
   <dialog id="dlg" aria-labelledby="dlg-t">
     <form class="dform" id="vform">
       <div><h2 id="dlg-t">תיעוד ביקור</h2><p class="sub" id="dlg-sub"></p></div>
-      <div class="opts" role="radiogroup" aria-label="מצב הסניף">
-        <label><input type="radio" name="status" id="st0" value="תקין" checked><span>תקין</span></label>
-        <label><input type="radio" name="status" id="st1" value="יש בעיה"><span>יש בעיה</span></label>
-        <label><input type="radio" name="status" id="st2" value="סניף סגור"><span>סניף סגור</span></label>
+      <div class="opts" role="radiogroup" aria-label="מה מצאתם בסניף">
+        <label><input type="radio" name="ans" value="הכל עובד מצוין: יש שילוט, קופאי מציע" data-s="תקין"><span>הכל עובד מצוין: יש שילוט, קופאי מציע</span></label>
+        <label><input type="radio" name="ans" value="בעיה: יש שילוט, קופאי לא מציע" data-s="יש בעיה"><span>בעיה: יש שילוט, קופאי לא מציע</span></label>
+        <label><input type="radio" name="ans" value="בעיה: יש שילוט, קופאי לא מכיר" data-s="יש בעיה"><span>בעיה: יש שילוט, קופאי לא מכיר</span></label>
+        <label><input type="radio" name="ans" value="חסר שילוט, קופאי מציע" data-s="יש בעיה"><span>חסר שילוט, קופאי מציע</span></label>
+        <label><input type="radio" name="ans" value="אין שילוט, קופאי לא מכיר" data-s="יש בעיה"><span>אין שילוט, קופאי לא מכיר</span></label>
+        <label><input type="radio" name="ans" value="אין חנות במתחם" data-s="סניף סגור"><span>אין חנות במתחם</span></label>
+        <label><input type="radio" name="ans" value="החנות סגורה כרגע" data-s="סניף סגור"><span>החנות סגורה כרגע</span></label>
       </div>
       <p class="dwarn" id="vwarn" hidden></p>
       <div class="kfield"><label for="vcash">מספר קופאיות</label>
         <div class="kstep"><button type="button" id="kminus" aria-label="פחות קופאית אחת">−</button><input id="vcash" type="number" inputmode="numeric" min="0" max="200" placeholder="?"><button type="button" id="kplus" aria-label="עוד קופאית אחת">+</button></div></div>
-      <textarea id="vnote" placeholder="הערה (לא חובה)" maxlength="1000" aria-label="הערה"></textarea>
+      <textarea id="vnote" placeholder="פירוט נוסף (לא חובה)" maxlength="1000" aria-label="הערה"></textarea>
       <div class="photo"><label for="vphoto" id="vphoto-l">צילום או העלאת תמונה</label><input type="file" id="vphoto" accept="image/*"><img id="vprev" alt="תצוגה מקדימה של התמונה" hidden></div>
       <p class="derr" id="verr" hidden></p>
       <div class="drow"><button type="submit" class="go" id="vsend">שמירת הביקור</button><button type="button" class="no" id="vcancel">ביטול</button></div>
@@ -414,11 +418,13 @@ $('kminus').addEventListener('click', () => bump(-1)); $('kplus').addEventListen
 $('vform').addEventListener('submit', async e => {
   e.preventDefault();
   if (!cur) return;
-  const status = new FormData(e.target).get('status'), cashiers = $('vcash').value.trim();
+  const pick = e.target.querySelector('input[name=ans]:checked'), cashiers = $('vcash').value.trim();
+  if (!pick) { $('verr').textContent = 'צריך לבחור מה מצאתם בסניף.'; $('verr').hidden = false; return; }
+  const status = pick.dataset.s, extra = $('vnote').value.trim(), note = pick.value + (extra ? ' | ' + extra : '');  // בגיליון נרשמת התשובה המלאה
   if (cashiers === '' && status !== 'סניף סגור') { $('verr').textContent = 'כמה קופאיות יש בסניף? צריך למלא מספר לפני השמירה.'; $('verr').hidden = false; $('vcash').focus(); return; }
   const btn = $('vsend'); btn.disabled = true; btn.textContent = 'שומר...'; $('verr').hidden = true;
   try {
-    const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, cs: csOf(cur.m), status, cashiers, note: $('vnote').value, photo, thumb };
+    const body = { r: token, m: cur.m.i, mn: cur.m.n, city: cur.m.c, chain: cur.chain, cs: csOf(cur.m), status, cashiers, note, photo, thumb };
     const res = await (await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })).json();
     if (!res.ok) { loadVisits.sig = ''; lastLoad = 0; throw new Error(res.error || ''); }
     if (res.latest) { applyState(res); loadVisits.sig = ''; } else latest[cur.m.i + '|' + cur.chain] = res.visit;
