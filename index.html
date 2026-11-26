@@ -343,8 +343,8 @@ function visitUI(m, i) {
     ${other ? '' : lockedUntil(v) ? `<span class="vlock">ביקור נוסף מ-${fmt(lockedUntil(v))}</span>` : `<button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button>`}</div>`;
 }
 /* כניסה מתוך האתר עצמו (למשל באפליקציה מותקנת, בלי שורת כתובת): מדביקים קישור אישי של נציג או את קישור הדאשבורד */
-function navLinks() { $('dashlink').hidden = !store('pm_admin'); $('login').hidden = !API || (!!rep && !!store('pm_admin')); }
-$('login').addEventListener('click', () => {
+function navLinks() { $('dashlink').hidden = !store('pm_admin'); $('login').hidden = !API || !!rep; }  // נציג מחובר לא רואה את הכפתור; לחיצה על "שלום, ..." פותחת את אותה כניסה
+const askLogin = () => {
   const t = prompt('הדביקו כאן את הקישור האישי שלכם (מלשונית "נציגים") או את קישור הדאשבורד (מלשונית "הגדרות"):');
   if (!t) return;
   const r = (t.match(/[?&]r=([^&#\s]+)/) || [])[1], k = (t.match(/[?&]key=([^&#\s]+)/) || [])[1];
@@ -352,7 +352,8 @@ $('login').addEventListener('click', () => {
   if (r) store('pm_rep', decodeURIComponent(r));
   if (k) store('pm_admin', decodeURIComponent(k));
   location.href = location.pathname + location.hash;
-});
+};
+$('login').addEventListener('click', askLogin); $('who').addEventListener('click', askLogin);
 async function initRep() {
   navLinks();
   if (!API) return;
