@@ -142,10 +142,14 @@ function draw() {
   // תגמול לנציג לפי מדרגת הקופאיות הגבוהה ביותר שהגיע אליה
   const TIERS = [[200, 5000], [100, 2000], [75, 1500], [50, 1000], [25, 400], [10, 150]];
   const pay = k => (TIERS.find(t => k >= t[0]) || [0, 0])[1], nis = n => n.toLocaleString('he-IL') + ' ₪';
-  const payAll = repNames.reduce((t, n) => t + pay(kSum(n)), 0);
+  // התגמול נספר תמיד על כל הזמן, בלי תלות בתקופה שנבחרה: הביקור האחרון של הנציג בכל סניף
+  const kAllBy = {};
+  V.forEach(v => { if (v.k == null) return; const o = kAllBy[v.by] || (kAllBy[v.by] = {}), key = v.m + '|' + v.c; if (!(o[key] && o[key].t > v.t)) o[key] = v; });
+  const kAll = n => Object.values(kAllBy[n] || {}).reduce((t, v) => t + (v.k || 0), 0);
+  const payAll = repNames.reduce((t, n) => t + pay(kAll(n)), 0);
   const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set(), ks: {} };
     return `<tr><td>${esc(n)}</td><td><div class="meter"><div class="bar"><i style="width:${r.n / maxN * 100}%"></i></div><span class="num">${r.n}</span></div></td>
-      <td class="num">${r.malls.size}</td><td class="num">${kSum(n).toLocaleString('he-IL')}</td><td class="num">${pay(kSum(n)) ? nis(pay(kSum(n))) : '<span class="muted">-</span>'}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmtT(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
+      <td class="num">${r.malls.size}</td><td class="num">${kSum(n).toLocaleString('he-IL')}</td><td class="num">${pay(kAll(n)) ? nis(pay(kAll(n))) : '<span class="muted">-</span>'}${kAll(n) !== kSum(n) ? ` <span class="muted">(${kAll(n).toLocaleString('he-IL')} קופאיות בסך הכול)</span>` : ''}</td><td>${D.malls.filter(m => CL[m.i] === n).map(m => esc(m.n)).join(', ') || '<span class="muted">אין</span>'}</td><td class="num">${r.lt ? fmtT(r.lt) : '<span class="muted">אין ביקורים בתקופה</span>'}</td></tr>`; }).join('');
 
   const feed = [...inP].sort((a, b) => b.t - a.t).slice(0, 30).map(v => `<div class="visit">
       ${safeImg(v.thumb) ? `<img src="${safeImg(v.thumb)}" alt="תמונה מהביקור">` : '<div class="noimg"></div>'}
@@ -177,7 +181,7 @@ function draw() {
       <div class="card scroll" style="max-height:560px;overflow-y:auto"><table><thead><tr><th>רשת (לחיצה מציגה את המתחמים)</th><th>סניפים שבוקרו</th><th>קופאיות</th><th>ביקור אחרון</th></tr></thead><tbody>${chRows}</tbody></table></div></section>
     <section><h2>פעילות לפי נציג</h2>
       <div class="card scroll"><table><thead><tr><th>נציג</th><th>ביקורים</th><th>מתחמים שבוקרו</th><th>קופאיות</th><th>תגמול</th><th>מתחמים על שמו</th><th>ביקור אחרון</th></tr></thead><tbody>${repRows || '<tr><td colspan="7" class="muted">אין נציגים פעילים בגיליון.</td></tr>'}</tbody>${repRows ? `<tfoot><tr><td colspan="3"><strong>סך כל התגמולים</strong></td><td class="num"><strong>${repNames.reduce((t, n) => t + kSum(n), 0).toLocaleString('he-IL')}</strong></td><td class="num"><strong>${nis(payAll)}</strong></td><td colspan="2"></td></tr></tfoot>` : ''}</table></div>
-      <p class="sub">מדרגות התגמול: ${TIERS.slice().reverse().map(t => `מ-${t[0]} קופאיות ${nis(t[1])}`).join(', ')}. מחושב לפי הקופאיות בתקופה שנבחרה למעלה.</p>
+      <p class="sub">מדרגות התגמול: ${TIERS.slice().reverse().map(t => `מ-${t[0]} קופאיות ${nis(t[1])}`).join(', ')}. התגמול מחושב תמיד לפי כל הקופאיות שהנציג תיעד מתחילת הפעילות, גם כשנבחרה תקופה קצרה יותר.</p>
     </section>
     <section><h2>ביקורים אחרונים</h2>
       ${feed ? `<div class="feed">${feed}</div>` : `<div class="state">עדיין אין ביקורים בתקופה שנבחרה.</div>`}
