@@ -77,6 +77,7 @@ h2{font-family:var(--display);font-weight:400;font-size:1.2rem;margin:10px 0 0}
 .note{font-size:.82rem;color:var(--muted);margin:0;max-width:65ch}
 /* תיעוד ביקורים (לנציגים בלבד) */
 .who{font-size:.85rem;font-weight:500;color:var(--brand)}
+.navl{background:none;border:1px solid currentColor;border-radius:999px;padding:3px 12px;font-family:inherit;cursor:pointer;text-decoration:none}
 .vis{display:flex;flex-direction:column;gap:6px;padding:0 10px 10px;margin-top:auto;font-size:.8rem;text-align:center}
 .vstat{font-weight:700}.vstat.s0{color:var(--ok)}.vstat.s1{color:var(--warn)}.vstat.s2{color:var(--bad)}
 .vwhen{color:var(--muted)}
@@ -137,6 +138,8 @@ dialog::backdrop{background:rgba(8,14,28,.6)}
       <a class="logo-word" href="#">מפת <span>השותפים</span></a>
       <span class="org">הרשתות השותפות של יד לילד המיוחד</span>
       <span class="who" id="who" hidden></span>
+      <a class="who navl" id="dashlink" href="dashboard.html" hidden>הדאשבורד שלי</a>
+      <button class="who navl" id="login" type="button" hidden>כניסה</button>
     </div>
     <label class="search">
       <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -339,7 +342,19 @@ function visitUI(m, i) {
   return `<div class="vis">${v ? `<span class="vstat s${STAT.indexOf(v.s)}">${ICON[STAT.indexOf(v.s)] || ''} ${esc(v.s)}</span><span class="vwhen">${fmt(v.t)} · ${esc(v.by)}</span>` : '<span class="vwhen">טרם בוקר</span>'}
     ${other ? '' : lockedUntil(v) ? `<span class="vlock">ביקור נוסף מ-${fmt(lockedUntil(v))}</span>` : `<button class="vbtn" type="button" data-visit="${i}">${v ? 'ביקור נוסף' : 'תיעוד ביקור'}</button>`}</div>`;
 }
+/* כניסה מתוך האתר עצמו (למשל באפליקציה מותקנת, בלי שורת כתובת): מדביקים קישור אישי של נציג או את קישור הדאשבורד */
+function navLinks() { $('dashlink').hidden = !store('pm_admin'); $('login').hidden = !API || (!!rep && !!store('pm_admin')); }
+$('login').addEventListener('click', () => {
+  const t = prompt('הדביקו כאן את הקישור האישי שלכם (מלשונית "נציגים") או את קישור הדאשבורד (מלשונית "הגדרות"):');
+  if (!t) return;
+  const r = (t.match(/[?&]r=([^&#\s]+)/) || [])[1], k = (t.match(/[?&]key=([^&#\s]+)/) || [])[1];
+  if (!r && !k) { alert('לא זיהיתי קישור. צריך להדביק את הקישור המלא.'); return; }
+  if (r) store('pm_rep', decodeURIComponent(r));
+  if (k) store('pm_admin', decodeURIComponent(k));
+  location.href = location.pathname + location.hash;
+});
 async function initRep() {
+  navLinks();
   if (!API) return;
   const u = new URL(location.href), r = u.searchParams.get('r');
   if (r) store('pm_rep', r);  // הקוד נשאר בכתובת בכוונה: כך הוא עובר הלאה כשמעתיקים את הכתובת או פותחים אותה בדפדפן אחר
@@ -348,7 +363,7 @@ async function initRep() {
   try {
     const me = await (await fetch(API + '?action=me&r=' + encodeURIComponent(token))).json();
     if (!me.ok) return;
-    rep = me.name; $('who').textContent = 'שלום, ' + rep; $('who').hidden = false;
+    rep = me.name; $('who').textContent = 'שלום, ' + rep; $('who').hidden = false; navLinks();
     render();
     await loadVisits(true);
   } catch (e) { /* בלי רשת האתר ממשיך לעבוד לצפייה בלבד */ }
