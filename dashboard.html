@@ -135,7 +135,9 @@ function draw() {
   const byRep = {};
   inP.forEach(v => { const r = byRep[v.by] || (byRep[v.by] = { n: 0, lt: 0, malls: new Set(), ks: {} }); r.n++; r.lt = Math.max(r.lt, v.t); r.malls.add(v.m);
     const key = v.m + '|' + v.c; if (v.k != null && !(r.ks[key] && r.ks[key].t > v.t)) r.ks[key] = v; });  // קופאיות: לפי הביקור האחרון של הנציג בכל סניף, כדי לא לספור סניף פעמיים
-  const repNames = [...new Set([...REPS, ...Object.keys(byRep)])].filter(n => !who || n === who).sort((a, b) => (byRep[b]?.n || 0) - (byRep[a]?.n || 0));
+  const repNames = [...new Set([...REPS, ...Object.keys(byRep)])].filter(n => !who || n === who);
+  const kSum = n => Object.values(byRep[n]?.ks || {}).reduce((t, v) => t + (v.k || 0), 0);
+  repNames.sort((a, b) => kSum(b) - kSum(a) || (byRep[b]?.n || 0) - (byRep[a]?.n || 0));  // סדר יורד לפי מספר הקופאיות
   const maxN = Math.max(1, ...Object.values(byRep).map(r => r.n));
   const repRows = repNames.map(n => { const r = byRep[n] || { n: 0, lt: 0, malls: new Set(), ks: {} };
     return `<tr><td>${esc(n)}</td><td><div class="meter"><div class="bar"><i style="width:${r.n / maxN * 100}%"></i></div><span class="num">${r.n}</span></div></td>
